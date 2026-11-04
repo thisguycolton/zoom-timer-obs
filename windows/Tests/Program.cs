@@ -105,7 +105,7 @@ Console.WriteLine("Server");
     var port = ((IPEndPoint)probe.LocalEndpoint).Port;
     probe.Stop();
     var reading = (RawReading)new RawReading.Idle(180);
-    using var bridge = new Bridge(port, overlay, () => reading, store);
+    using var bridge = new Bridge(port, overlay, () => reading, store) { FontProvider = () => new[] { "Zeta", ".Hidden", "alpha", "Zeta", " " } };
     bridge.Start();
     Thread.Sleep(600);
     using var http = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
@@ -161,6 +161,8 @@ Console.WriteLine("Server");
     html.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/html");
     Check("reject non-image 415", http.PostAsync("/assets", html).Result.StatusCode == HttpStatusCode.UnsupportedMediaType);
     Check("OPTIONS 204", http.SendAsync(new HttpRequestMessage(HttpMethod.Options, "/layout")).Result.StatusCode == HttpStatusCode.NoContent);
+    var fonts = http.GetStringAsync("/fonts").Result;
+    Check("/fonts sorted, deduped, hidden dropped", fonts == "[\"alpha\",\"Zeta\"]", fonts);
     Check("DELETE 405", http.DeleteAsync("/state").Result.StatusCode == HttpStatusCode.MethodNotAllowed);
 
     try

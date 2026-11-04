@@ -24,6 +24,10 @@ public sealed class HttpServer : IDisposable
 
     public int Port { get; }
 
+    /// <summary>Lists installed font family names for GET /fonts (platform-specific; empty if unset).</summary>
+    public Func<IEnumerable<string>>? FontProvider { get; set; }
+    byte[]? fontsJson;
+
     public HttpServer(int port, string overlayDirectory, Func<TimerState> currentState, LayoutStore? layoutStore = null)
     {
         Port = port;
@@ -219,6 +223,9 @@ public sealed class HttpServer : IDisposable
                 if (layout is null) await Respond(stream, "404 Not Found", "application/json", "null"u8.ToArray());
                 else await Respond(stream, "200 OK", "application/json", layout);
                 return false;
+            case "/fonts":
+                await Respond(stream, "200 OK", "application/json", FontsJson());
+                return false;
             case "/events":
                 await OpenEventStream(stream);
                 return true;
@@ -229,6 +236,22 @@ public sealed class HttpServer : IDisposable
                     await ServeFile(path, overlayDirectory, stream);
                 return false;
         }
+    }
+
+    /// <summary>Sorted, de-duplicated family names, computed once; hidden names (leading ".") are dropped.</summary>
+    byte[] FontsJson()
+    {
+        if (fontsJson is not null) return fontsJson;
+        IEnumerable<string> names;
+        try { names = FontProvider?.Invoke() ?? Enumerable.Empty<string>(); }
+        catch { names = Enumerable.Empty<string>(); }
+        var list = names.Where(n => !string.IsNullOrWhiteSpace(n) && !n.StartsWith('.'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var json = JsonSerializer.SerializeToUtf8Bytes(list);
+        if (list.Count > 0) fontsJson = json;
+        return json;
     }
 
     static bool IsJsonObject(byte[] body)

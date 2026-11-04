@@ -23,6 +23,8 @@ public sealed class Bridge : IDisposable
     }
 
     public int Port => server.Port;
+    /// <summary>Supplies installed font names for GET /fonts.</summary>
+    public Func<IEnumerable<string>>? FontProvider { get => server.FontProvider; set => server.FontProvider = value; }
     public string OverlayDirectory { get; }
     public string BaseUrl => $"http://127.0.0.1:{Port}";
     public TimerState State { get { lock (stateLock) return tracker.State; } }

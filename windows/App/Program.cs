@@ -38,7 +38,14 @@ static class Program
         // A second copy can't bind the port; say so instead of failing silently.
         using var mutex = new Mutex(true, "ZoomTimerBridge-" + port, out var first);
         var reader = new ZoomReader();
-        var bridge = new Bridge(port, Bridge.LocateOverlay(overlay), reader.Read);
+        var bridge = new Bridge(port, Bridge.LocateOverlay(overlay), reader.Read)
+        {
+            FontProvider = () =>
+            {
+                using var installed = new System.Drawing.Text.InstalledFontCollection();
+                return installed.Families.Select(f => f.Name).ToList();
+            },
+        };
         try
         {
             bridge.Start();
