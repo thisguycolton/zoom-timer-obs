@@ -1,0 +1,58 @@
+/* Zoom Timer overlay. Everything visual is a CSS variable, so it can be restyled from
+   OBS (Browser Source > Custom CSS) or from URL parameters (see config.html). */
+:root {
+  --ok: #34c759;
+  --warn: #ffcc00;
+  --danger: #ff3b30;
+  --over: #ff3b30;
+  --text: #ffffff;
+  --panel: rgba(0, 0, 0, 0.55);
+  --track: rgba(255, 255, 255, 0.18);
+  --font: -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  --size: 96px;          /* clock font size; everything else scales from it */
+  --radius: 0.18em;
+  --bar-height: 0.16em;
+  --accent: var(--ok);   /* set live by overlay.js from the percentage */
+}
+
+html, body { margin: 0; background: transparent; overflow: hidden; }
+body { font-family: var(--font); color: var(--text); }
+
+.timer {
+  display: inline-flex; flex-direction: column; gap: 0.12em;
+  font-size: var(--size); padding: 0.18em 0.28em; margin: 16px;
+  background: var(--panel); border-radius: var(--radius);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.timer[hidden] { display: none; }
+body.no-panel .timer { background: transparent; }
+
+.row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.3em; }
+.label { font-size: 0.24em; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.clock { font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--clock-color, var(--text)); }
+.pct { font-size: 0.3em; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+.bar { height: var(--bar-height); background: var(--track); border-radius: 999px; overflow: hidden; min-width: 4.2em; }
+.bar > i { display: block; height: 100%; width: 100%; background: var(--accent); border-radius: inherit;
+           transform-origin: left; transition: transform 1s linear, background-color .6s ease; }
+
+/* Ring layout */
+.ring { position: relative; width: 2.4em; height: 2.4em; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 6; }
+.ring .track { stroke: var(--track); }
+.ring .fill { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke .6s ease; }
+.ring .clock { font-size: 0.5em; }
+body:not(.layout-ring) .ring { display: none; }
+body.layout-ring .bar, body.layout-ring .row .clock { display: none; }
+body.layout-ring .row { justify-content: center; }
+body.layout-text .bar, body.layout-text .pct { display: none; }
+
+/* States */
+body.s-timesup .clock, body.s-overtime .clock { --clock-color: var(--over); }
+body.s-timesup .timer { animation: pulse .8s ease-in-out infinite alternate; }
+body.s-overtime .bar > i { background: var(--over); }
+body.s-paused .clock { opacity: .55; }
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.04); } }
+.banner { display: none; font-size: 0.32em; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--over); }
+body.s-timesup .banner, body.s-overtime .banner { display: block; }

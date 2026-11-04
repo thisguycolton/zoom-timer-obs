@@ -22,7 +22,29 @@ swift run -c release ZoomTimerBridge
 
 Options: `--port 17845` (default) and `--overlay path/to/folder` (defaults to `./overlay`).
 
-Then in OBS add a **Browser Source** with URL `http://127.0.0.1:17845/`.
+Then open **http://127.0.0.1:17845/config.html** in your browser to pick a style (layout, colors,
+warning thresholds, labels) with a live preview, and copy the URL it gives you. In OBS add a
+**Browser Source** with that URL (width 800, height 400 is a good start).
+
+## Overlay options
+
+The overlay (`overlay/index.html`) is styled with URL parameters, which `config.html` builds for you:
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `layout` | `bar` | `bar` (time + progress bar), `ring` (progress ring), `text` (time only) |
+| `warn` / `danger` | `0.5` / `0.2` | Fraction of time left at which the color switches to warning / danger |
+| `blend` | off | `1` fades smoothly between colors instead of stepping |
+| `ok`, `warnColor`, `dangerColor`, `over`, `text`, `track`, `panelColor` | | Colors, hex with or without `#` |
+| `size` | `96` | Clock size in px; everything scales from it |
+| `font` | system | Any installed font name |
+| `label` | none | Small caption above the time |
+| `timesup` / `overtime` | `Time's up` / `Over time` | Text shown at zero and in overtime |
+| `percent=0`, `panel=0`, `idle=0` | | Hide the percentage, the dark panel, or the timer before Start |
+| `demo=1` | | Fake 30 s timer, for styling without Zoom |
+
+For deeper changes, every color and size is a CSS variable in `overlay/overlay.css`, so you can
+also override them in OBS's Browser Source **Custom CSS** box, e.g. `:root { --size: 140px; --ok: #00e5ff; }`.
 
 ## Endpoints
 
