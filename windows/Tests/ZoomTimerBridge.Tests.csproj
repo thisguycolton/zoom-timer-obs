@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Dependency-free test runner (dotnet run --project windows/Tests); exits non-zero on failure. -->
+  <!-- Dependency-free test runner (dotnet run, project windows/Tests); exits non-zero on failure. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
