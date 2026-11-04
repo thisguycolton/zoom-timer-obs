@@ -551,6 +551,14 @@
   window.addEventListener("resize", positionSelection);
   new ResizeObserver(() => positionSelection()).observe($("stageWrap"));
 
+  // Shortcut hints are written for macOS; show Ctrl on Windows/Linux.
+  if (!/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) {
+    document.querySelectorAll("kbd, button[title]").forEach((n) => {
+      if (n.tagName === "KBD") n.textContent = n.textContent.replace("⌘", "Ctrl+").replace("⇧", "Shift").replace("⌫", "Delete");
+      else n.title = n.title.replace("⇧⌘", "Ctrl+Shift+").replace("⌘", "Ctrl+");
+    });
+  }
+
   setPreview("demo");
   load();
 })();

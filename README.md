@@ -9,6 +9,9 @@ and serves it on `http://127.0.0.1:17845` so an OBS Browser Source can display i
 **Just want to use it?** Follow the **[Setup guide](SETUP.md)**: download the app, allow
 Accessibility, and add one Browser Source to OBS.
 
+There's also a **Windows version** (tray app using UI Automation) in [`windows/`](windows/); see the
+[Windows setup](SETUP.md#windows). It's untested on real hardware so far.
+
 ## Requirements
 
 - macOS 13 or later, Zoom desktop app, Swift toolchain (Xcode or Command Line Tools)

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Platform-independent parts of the Windows helper: parsing, state tracking, HTTP server, layout storage.
+       Kept separate so the tests (and the server) also run on macOS/Linux. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ZoomTimerBridge</RootNamespace>
+  </PropertyGroup>
+</Project>
