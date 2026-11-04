@@ -10,6 +10,8 @@ final class HTTPServer {
     private let currentState: () -> TimerState
     private var eventClients: [ObjectIdentifier: NWConnection] = [:]
     private let layoutStore = LayoutStore()
+    /// Called (on the server queue) if the listener fails, e.g. the port is already in use. Default: exit.
+    var onFailure: ((Error) -> Void)?
     /// Request bodies are only accepted for POST /layout; a background image may be inlined as a data URL.
     private static let maxBodySize = 12 * 1024 * 1024
 
@@ -24,10 +26,10 @@ final class HTTPServer {
     }
 
     func start() {
-        listener.stateUpdateHandler = { state in
+        listener.stateUpdateHandler = { [weak self] state in
             if case let .failed(error) = state {
                 FileHandle.standardError.write(Data("Server failed: \(error)\n".utf8))
-                exit(1)
+                if let onFailure = self?.onFailure { onFailure(error) } else { exit(1) }
             }
         }
         listener.newConnectionHandler = { [weak self] connection in

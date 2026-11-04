@@ -1,10 +1,15 @@
+import AppKit
 import ApplicationServices
 import Foundation
 
 // ZoomTimerBridge: reads Zoom's in-meeting Timer app via Accessibility and serves it to OBS.
+// Runs as a menu bar app inside "Zoom Timer Bridge.app" (or with --menubar), otherwise as a command-line tool.
+
+setvbuf(stdout, nil, _IOLBF, 0)
 
 var port: UInt16 = 17845
 var overlayPath: String?
+var menuBar = Bundle.main.bundleURL.pathExtension == "app"
 var arguments = CommandLine.arguments.dropFirst().makeIterator()
 while let argument = arguments.next() {
     switch argument {
@@ -13,78 +18,44 @@ while let argument = arguments.next() {
         port = value
     case "--overlay":
         overlayPath = arguments.next()
+    case "--menubar":
+        menuBar = true
+    case "--cli":
+        menuBar = false
     case "-h", "--help":
         print("""
-        Usage: ZoomTimerBridge [--port 17845] [--overlay path/to/overlay]
+        Usage: ZoomTimerBridge [--port 17845] [--overlay path/to/overlay] [--menubar | --cli]
           Serves http://127.0.0.1:<port>/ (overlay), /state (JSON) and /events (Server-Sent Events).
         """)
         exit(0)
     default:
-        fatalError("Unknown argument \(argument). Try --help.")
+        // macOS may pass -psn_… or -NS… arguments to apps; ignore anything we don't know.
+        if !argument.hasPrefix("-psn") && !argument.hasPrefix("-NS") { print("Ignoring unknown argument \(argument)") }
     }
 }
 
-/// Uses --overlay, else ./overlay, else an overlay/ folder next to or above the executable (e.g. the repo when run from .build).
-func locateOverlay() -> URL {
-    let fm = FileManager.default
-    if let overlayPath { return URL(fileURLWithPath: overlayPath) }
-    let cwd = URL(fileURLWithPath: fm.currentDirectoryPath).appendingPathComponent("overlay")
-    if fm.fileExists(atPath: cwd.appendingPathComponent("index.html").path) { return cwd }
-    var dir = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().deletingLastPathComponent()
-    for _ in 0..<6 {
-        let candidate = dir.appendingPathComponent("overlay")
-        if fm.fileExists(atPath: candidate.appendingPathComponent("index.html").path) { return candidate }
-        dir.deleteLastPathComponent()
-    }
-    return cwd
-}
-
-func warnIfNotTrusted() {
-    guard !AXIsProcessTrusted() else { return }
-    let host = ProcessInfo.processInfo.environment["TERM_PROGRAM"].map { " (\($0))" } ?? ""
-    print("""
-    ⚠️  Accessibility permission is missing, so Zoom's Timer can't be read.
-       Open System Settings › Privacy & Security › Accessibility and turn on the app that
-       launched ZoomTimerBridge: your terminal app\(host) when started from a shell, or the
-       ZoomTimerBridge binary itself if you added it there. Then restart ZoomTimerBridge.
-    """)
-}
-
-let queue = DispatchQueue(label: "ZoomTimerBridge")
-let reader = TimerReader()
-let tracker = TimerTracker()
-let overlay = locateOverlay()
-
-let server: HTTPServer
+let bridge: Bridge
 do {
-    server = try HTTPServer(port: port, overlayDirectory: overlay, queue: queue) { tracker.state }
+    bridge = try Bridge(port: port, overlayDirectory: Bridge.locateOverlay(overlayPath))
 } catch {
     fatalError("Could not start server on port \(port): \(error)")
 }
 
-warnIfNotTrusted()
-server.start()
-print("ZoomTimerBridge on http://127.0.0.1:\(port)/  (state: /state, events: /events, overlay: \(overlay.path))")
-
-var lastLogged: TimerStatus?
-let poll = DispatchSource.makeTimerSource(queue: queue)
-poll.schedule(deadline: .now(), repeating: .milliseconds(250))
-poll.setEventHandler {
-    guard tracker.update(with: reader.read()) else { return }
-    let state = tracker.state
-    if state.status != lastLogged {
-        print("status: \(state.status.rawValue) \(state.display)")
-        lastLogged = state.status
-        if state.status == .notFound || state.status == .zoomClosed, !AXIsProcessTrusted() { warnIfNotTrusted() }
+if menuBar {
+    let app = NSApplication.shared
+    let delegate = MenuBarApp(bridge: bridge)
+    app.delegate = delegate
+    app.setActivationPolicy(.accessory)
+    app.run()
+} else {
+    if !AXIsProcessTrusted() {
+        let host = ProcessInfo.processInfo.environment["TERM_PROGRAM"].map { " (\($0))" } ?? ""
+        print("""
+        ⚠️  Accessibility permission is missing, so Zoom's Timer can't be read.
+           Open System Settings › Privacy & Security › Accessibility and turn on the app that
+           launched ZoomTimerBridge: your terminal app\(host) when started from a shell. Then restart it.
+        """)
     }
-    server.broadcast(state)
+    bridge.start()
+    dispatchMain()
 }
-poll.resume()
-
-let heartbeat = DispatchSource.makeTimerSource(queue: queue)
-heartbeat.schedule(deadline: .now() + 5, repeating: .seconds(5))
-heartbeat.setEventHandler { server.heartbeat() }
-heartbeat.resume()
-
-setvbuf(stdout, nil, _IOLBF, 0)
-dispatchMain()

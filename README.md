@@ -6,6 +6,9 @@ Zoom's Timer (a Zoom App) has no API, but on macOS its countdown is exposed thro
 Accessibility API. **ZoomTimerBridge** is a small Mac helper that reads it four times a second
 and serves it on `http://127.0.0.1:17845` so an OBS Browser Source can display it however you like.
 
+**Just want to use it?** Follow the **[Setup guide](SETUP.md)**: download the app, allow
+Accessibility, and add one Browser Source to OBS.
+
 ## Requirements
 
 - macOS 13 or later, Zoom desktop app, Swift toolchain (Xcode or Command Line Tools)
@@ -17,8 +20,13 @@ and serves it on `http://127.0.0.1:17845` so an OBS Browser Source can display i
 ## Build and run
 
 ```bash
-swift run -c release ZoomTimerBridge
+scripts/build-app.sh            # builds dist/Zoom Timer Bridge.app and dist/ZoomTimerBridge-1.0.0.zip
+scripts/build-app.sh --install  # same, and copies the app to /Applications
+swift run -c release ZoomTimerBridge   # or run from source as a command-line tool (add --menubar for the menu)
 ```
+
+The app lives in the menu bar (no Dock icon). Its menu shows the timer status and has Open Layout
+Editor, Copy OBS URL, Open Simple Setup, Start at Login and Quit.
 
 Options: `--port 17845` (default) and `--overlay path/to/folder` (defaults to `./overlay`).
 
