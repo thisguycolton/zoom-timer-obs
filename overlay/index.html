@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Zoom Timer</title>
+<style>
+  /* Placeholder overlay; the styled version comes next. Transparent so it sits on top of OBS scenes. */
+  html, body { margin: 0; background: transparent; }
+  #time { font: 700 120px/1 -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+          color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.6); font-variant-numeric: tabular-nums; padding: 16px; }
+  body[data-status="overtime"] #time, body[data-status="timesup"] #time { color: #ff4d4f; }
+  body[data-status="zoomClosed"] #time, body[data-status="notFound"] #time { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="time">--:--</div>
+<script>
+  const el = document.getElementById("time");
+  const events = new EventSource("/events");
+  events.onmessage = (e) => {
+    const s = JSON.parse(e.data);
+    document.body.dataset.status = s.status;
+    el.textContent = s.display || "--:--";
+  };
+</script>
+</body>
+</html>
