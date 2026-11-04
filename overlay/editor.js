@@ -371,6 +371,8 @@
       swatch.addEventListener("input", () => { text.value = swatch.value; onChange(swatch.value); });
       text.addEventListener("change", () => onChange(text.value.trim()));
       control = el("div", { class: "row" }, [swatch, text]);
+    } else if (kind === "font") {
+      control = FontPicker.create({ value: obj[key] || "", placeholder: extra.placeholder, googleFonts: ZTC.GOOGLE_FONTS, onChange: onChange }).element;
     } else if (kind === "range") {
       control = el("input", { type: "range", min: extra.min, max: extra.max, step: extra.step });
       control.value = value;
@@ -441,7 +443,7 @@
           options: [["auto", "Text color, red when over"], ["fixed", "Always this color"], ["accent", "Follow progress color"]] }));
       }
       props.appendChild(field("Color", item, "color", "color", { placeholder: "theme" , swatch: "#ffffff" }));
-      props.appendChild(field("Font", item, "font", "text", { placeholder: "theme font" }));
+      props.appendChild(field("Font", item, "font", "font", { placeholder: "Theme font" }));
       props.appendChild(field("Weight", item, "weight", "select", { options: FONT_WEIGHTS, default: item.type === "label" ? "600" : "700" }));
       props.appendChild(field("Align", item, "align", "select", { options: ALIGN, default: "center" }));
       props.appendChild(field("Padding", item, "padding", "number", { min: 0, placeholder: "0" }));
@@ -489,7 +491,7 @@
     if (c.image) props.appendChild(field("Image fit", c, "imageFit", "select", { options: [["cover", "Cover"], ["contain", "Contain"], ["100% 100%", "Stretch"]], rebuild: true }));
 
     props.appendChild(heading("Theme"));
-    props.appendChild(field("Font", t, "font", "text", { placeholder: "SF Pro Display" }));
+    props.appendChild(field("Font", t, "font", "font", { placeholder: "System default" }));
     props.appendChild(field("Text", t, "text", "color", { swatch: "#ffffff" }));
     props.appendChild(field("Plenty left", t, "ok", "color"));
     props.appendChild(field("Warning", t, "warn", "color"));

@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import CoreText
 
 /// Minimal HTTP/1.1 server bound to 127.0.0.1: /state, /events (SSE) and static files.
 /// All work runs on `queue`, which the caller shares with the timer reader.
@@ -139,6 +140,8 @@ final class HTTPServer {
         switch path {
         case "/state":
             respond(connection, status: "200 OK", contentType: "application/json", body: currentState().json())
+        case "/fonts":
+            respond(connection, status: "200 OK", contentType: "application/json", body: Self.fontFamilies)
         case "/layout":
             if let layout = layoutStore.load() {
                 respond(connection, status: "200 OK", contentType: "application/json", body: layout)
@@ -213,6 +216,14 @@ final class HTTPServer {
             + "Connection: close\r\n\r\n"
         connection.send(content: Data(head.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })
     }
+
+    /// Installed font family names for the editor's font picker, as a sorted JSON array. Computed once.
+    private static let fontFamilies: Data = {
+        let names = (CTFontManagerCopyAvailableFontFamilyNames() as? [String] ?? [])
+            .filter { !$0.hasPrefix(".") }
+        let sorted = Array(Set(names)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        return (try? JSONSerialization.data(withJSONObject: sorted)) ?? Data("[]".utf8)
+    }()
 
     private static func mimeType(for ext: String) -> String {
         switch ext.lowercased() {

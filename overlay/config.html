@@ -38,7 +38,7 @@
       <label>Label above the time (optional)<input name="label" placeholder="e.g. Speaker time"></label>
       <div class="two">
         <label>Clock size (px)<input name="size" type="number" min="24" max="400" value="96"></label>
-        <label>Font<input name="font" placeholder="system default"></label>
+        <label>Font<input type="hidden" name="font"><div id="fontPicker"></div></label>
       </div>
       <div class="two">
         <label>Warn at (% left)<input name="warn" type="number" min="0" max="100" value="50"></label>
@@ -67,6 +67,7 @@
     <p style="margin-top:8px">In OBS: Sources › + › Browser, paste the URL, set width 800 and height 400. The helper must be running.</p>
   </section>
 </main>
+<script src="fontpicker.js"></script>
 <script>
   const f = document.getElementById("f"), frame = document.getElementById("preview"), out = document.getElementById("url");
   const defaults = { layout: "bar", size: "96", warn: "50", danger: "20", ok: "#34c759", warnColor: "#ffcc00", dangerColor: "#ff3b30",
@@ -92,6 +93,12 @@
     const demo = new URLSearchParams(q); demo.set("demo", "1");
     frame.src = "index.html?" + demo.toString();
   }
+  // Font dropdown (installed fonts); it writes into the hidden "font" field that build() reads.
+  const fontInput = f.elements.font;
+  document.getElementById("fontPicker").appendChild(FontPicker.create({
+    value: fontInput.value, placeholder: "System default",
+    onChange: (name) => { fontInput.value = name; build(); },
+  }).element);
   let t; f.addEventListener("input", () => { clearTimeout(t); t = setTimeout(build, 250); });
   document.getElementById("copy").onclick = async () => {
     out.select();
