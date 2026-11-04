@@ -146,7 +146,8 @@ Console.WriteLine("Server");
     Check("JSON array 400", http.PostAsync("/layout", new StringContent("[1]")).Result.StatusCode == HttpStatusCode.BadRequest);
 
     reading = new RawReading.Countdown(37, false, "00:37", CountdownMode.Running);
-    var change = NextData();
+    string? change = null;
+    for (var i = 0; i < 5 && change?.Contains("\"status\":\"running\"") != true; i++) change = NextData();
     Check("SSE pushes changes", change?.Contains("\"status\":\"running\"") == true, change ?? "timeout");
 
     var png = new ByteArrayContent(new byte[] { 0x89, 0x50, 0x4E, 0x47, 1, 2, 3 });

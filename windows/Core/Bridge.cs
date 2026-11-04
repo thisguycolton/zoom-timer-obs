@@ -34,7 +34,7 @@ public sealed class Bridge : IDisposable
         Console.WriteLine($"ZoomTimerBridge on {BaseUrl}/  (state: /state, events: /events, overlay: {OverlayDirectory})");
         // UI Automation calls must come from one thread; keep polling, broadcasting and heartbeats on it.
         thread = new Thread(Loop) { IsBackground = true, Name = "ZoomTimerBridge poll" };
-        thread.SetApartmentState(ApartmentState.MTA);
+        if (OperatingSystem.IsWindows()) thread.SetApartmentState(ApartmentState.MTA);
         thread.Start();
     }
 

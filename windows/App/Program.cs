@@ -48,7 +48,7 @@ static class Program
             var message = $"Zoom Timer Bridge couldn't start: port {port} is unavailable ({e.Message}).\n\n" +
                           (first ? "Another program is using it." : "Zoom Timer Bridge is already running; look for its icon in the notification area (you may need to click ^).");
             if (console) Console.Error.WriteLine(message);
-            else MessageBox.Show(message, "Zoom Timer Bridge", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            else System.Windows.Forms.MessageBox.Show(message, "Zoom Timer Bridge", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return 1;
         }
 
@@ -62,10 +62,10 @@ static class Program
             return 0;
         }
 
-        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-        Application.EnableVisualStyles();
-        Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new TrayApp(bridge));
+        System.Windows.Forms.Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+        System.Windows.Forms.Application.EnableVisualStyles();
+        System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+        System.Windows.Forms.Application.Run(new TrayApp(bridge));
         return 0;
     }
 

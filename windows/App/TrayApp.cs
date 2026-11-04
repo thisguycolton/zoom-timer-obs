@@ -6,7 +6,7 @@ using Microsoft.Win32;
 namespace ZoomTimerBridge;
 
 /// <summary>Notification-area (tray) UI, matching the macOS menu bar app.</summary>
-sealed class TrayApp : ApplicationContext
+sealed class TrayApp : System.Windows.Forms.ApplicationContext
 {
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     const string RunValue = "ZoomTimerBridge";
@@ -28,7 +28,7 @@ sealed class TrayApp : ApplicationContext
         menu.Items.Add(statusLine);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Open Layout Editor", null, (_, _) => Open("/editor.html"));
-        menu.Items.Add("Copy OBS URL", null, (_, _) => Clipboard.SetText(bridge.BaseUrl + "/canvas.html"));
+        menu.Items.Add("Copy OBS URL", null, (_, _) => System.Windows.Forms.Clipboard.SetText(bridge.BaseUrl + "/canvas.html"));
         menu.Items.Add("Open Simple Setup", null, (_, _) => Open("/config.html"));
         menu.Items.Add(new ToolStripSeparator());
         loginItem.Click += (_, _) => ToggleLogin();
@@ -122,7 +122,7 @@ sealed class TrayApp : ApplicationContext
             path.AddArc(31 - r * 2, 31 - r * 2, r * 2, r * 2, 0, 90);
             path.AddArc(1, 31 - r * 2, r * 2, r * 2, 90, 90);
             path.CloseFigure();
-            using var fill = new LinearGradientBrush(new Point(0, 0), new Point(0, 32), Color.FromArgb(51, 140, 255), Color.FromArgb(26, 77, 217));
+            using var fill = new LinearGradientBrush(new System.Drawing.Point(0, 0), new System.Drawing.Point(0, 32), Color.FromArgb(51, 140, 255), Color.FromArgb(26, 77, 217));
             g.FillPath(fill, path);
             using var pen = new Pen(Color.White, 3f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
             g.DrawArc(pen, 7, 8, 18, 18, -60, 300);

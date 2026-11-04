@@ -16,9 +16,12 @@ public sealed class ZoomReader
     int? cachedPid;
     DateTime nextSearch = DateTime.MinValue;
 
+    static HashSet<int> ZoomProcessIds() =>
+        ProcessNames.SelectMany(name => Process.GetProcessesByName(name)).Select(p => p.Id).ToHashSet();
+
     public RawReading Read()
     {
-        var pids = ProcessNames.SelectMany(Process.GetProcessesByName).Select(p => p.Id).ToHashSet();
+        var pids = ZoomProcessIds();
         if (pids.Count == 0)
         {
             cachedDocument = null;
@@ -182,7 +185,7 @@ public sealed class ZoomReader
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"Zoom Timer Bridge diagnostics {DateTime.Now:yyyy-MM-dd HH:mm:ss}, {Environment.OSVersion}");
-        var pids = ProcessNames.SelectMany(Process.GetProcessesByName).Select(p => p.Id).ToHashSet();
+        var pids = ZoomProcessIds();
         sb.AppendLine("Zoom process ids: " + (pids.Count == 0 ? "none (Zoom not running)" : string.Join(", ", pids)));
         foreach (AutomationElement window in AutomationElement.RootElement.FindAll(TreeScope.Children, Condition.TrueCondition))
         {
