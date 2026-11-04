@@ -32,6 +32,48 @@
     image: { name: "Image" },
   };
 
+  // Fonts the editor offers from Google Fonts. Any layout using one loads it from fonts.googleapis.com
+  // (OBS's browser source has internet access); everything else must be installed on the computer.
+  const GOOGLE_FONTS = [
+    { name: "Inter", category: "Sans" }, { name: "Roboto", category: "Sans" }, { name: "Montserrat", category: "Sans" },
+    { name: "Poppins", category: "Sans" }, { name: "Space Grotesk", category: "Sans" }, { name: "Rubik", category: "Sans" },
+    { name: "Lexend", category: "Sans" }, { name: "Nunito", category: "Rounded" }, { name: "Quicksand", category: "Rounded" },
+    { name: "Fredoka", category: "Rounded" }, { name: "Oswald", category: "Condensed" }, { name: "Bebas Neue", category: "Condensed" },
+    { name: "Anton", category: "Condensed" }, { name: "Barlow Condensed", category: "Condensed" }, { name: "Teko", category: "Condensed" },
+    { name: "Rajdhani", category: "Tech" }, { name: "Orbitron", category: "Tech" }, { name: "Exo 2", category: "Tech" },
+    { name: "Audiowide", category: "Tech" }, { name: "Russo One", category: "Tech" }, { name: "Roboto Mono", category: "Mono" },
+    { name: "JetBrains Mono", category: "Mono" }, { name: "Space Mono", category: "Mono" }, { name: "Share Tech Mono", category: "Mono" },
+    { name: "VT323", category: "Retro" }, { name: "Press Start 2P", category: "Retro" }, { name: "Silkscreen", category: "Retro" },
+    { name: "Black Ops One", category: "Display" }, { name: "Bungee", category: "Display" }, { name: "Righteous", category: "Display" },
+    { name: "Archivo Black", category: "Display" }, { name: "Playfair Display", category: "Serif" }, { name: "Merriweather", category: "Serif" },
+    { name: "DM Serif Display", category: "Serif" }, { name: "Permanent Marker", category: "Handwritten" }, { name: "Caveat", category: "Handwritten" },
+  ];
+  const GOOGLE_FONT_NAMES = {};
+  GOOGLE_FONTS.forEach((f) => { GOOGLE_FONT_NAMES[f.name.toLowerCase()] = f.name; });
+  const loadedFonts = {};
+
+  /** Adds a Google Fonts stylesheet for each listed family not loaded yet. Returns true if it added any. */
+  function loadGoogleFonts(names) {
+    const wanted = names.map((n) => GOOGLE_FONT_NAMES[String(n || "").toLowerCase()]).filter((n) => n && !loadedFonts[n]);
+    if (!wanted.length) return false;
+    wanted.forEach((n) => { loadedFonts[n] = true; });
+    // One request per 12 families keeps URLs short.
+    for (let i = 0; i < wanted.length; i += 12) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?" + wanted.slice(i, i + 12)
+        .map((n) => "family=" + encodeURIComponent(n).replace(/%20/g, "+") + ":wght@300;400;500;600;700;800;900").join("&") + "&display=swap";
+      document.head.appendChild(link);
+    }
+    return true;
+  }
+
+  function fontsInLayout(layout) {
+    const names = [layout.theme.font];
+    layout.items.forEach((i) => names.push(i.font));
+    return names.filter(Boolean);
+  }
+
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   /** Fills in anything missing from a saved layout, in place (the editor keeps references to its objects). */
@@ -225,9 +267,17 @@
         root.appendChild(node.el);
         applyItemStyle(node);
       }
+      // Text is sized by measuring it, so measure again once web fonts arrive.
+      loadGoogleFonts(fontsInLayout(layout));
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
       resize();
       render();
       return layout;
+    }
+
+    function refit() {
+      for (const id in nodes) nodes[id].lastText = null;
+      render();
     }
 
     /** Re-applies one item's geometry/style after the editor changes it, without rebuilding. */
@@ -235,6 +285,7 @@
       const node = nodes[item.id];
       if (!node || node.item.type !== item.type) return setLayout(layout);
       node.item = item;
+      if (loadGoogleFonts(fontsInLayout(layout)) && document.fonts) document.fonts.ready.then(refit);
       applyItemStyle(node);
       render();
     }
@@ -295,6 +346,7 @@
     }
 
     window.addEventListener("resize", resize);
+    if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", refit);
     return {
       setLayout: setLayout, setState: setState, updateItem: updateItem, resize: resize,
       get layout() { return layout; }, get state() { return state; }, root: root,
@@ -313,5 +365,6 @@
     return seq;
   }
 
-  window.ZoomTimerCanvas = { createRenderer: createRenderer, normalize: normalize, DEFAULT_LAYOUT: DEFAULT_LAYOUT, TYPES: TYPES, demoStates: demoStates, clone: clone };
+  window.ZoomTimerCanvas = { createRenderer: createRenderer, normalize: normalize, DEFAULT_LAYOUT: DEFAULT_LAYOUT, TYPES: TYPES, demoStates: demoStates, clone: clone,
+                               GOOGLE_FONTS: GOOGLE_FONTS, loadGoogleFonts: loadGoogleFonts };
 })();

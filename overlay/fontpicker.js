@@ -3,6 +3,8 @@
 // the browser's Local Font Access API, then to a short list of common fonts.
 //   const picker = FontPicker.create({ value: "Avenir Next", placeholder: "Default", onChange: (name) => ... });
 //   container.appendChild(picker.element);
+// Pass googleFonts: [{ name, category }] to also offer web fonts (loaded for previews when the list opens;
+// canvas-render.js loads the chosen ones in OBS).
 (function () {
   const COMMON = ["Arial", "Arial Black", "Avenir Next", "Bebas Neue", "Courier New", "Futura", "Georgia", "Gill Sans",
     "Helvetica Neue", "Impact", "Inter", "Menlo", "Montserrat", "Roboto", "Segoe UI", "SF Mono", "SF Pro Display",
@@ -101,10 +103,14 @@
     function render() {
       const q = search.value.trim();
       const ql = q.toLowerCase();
-      const matches = ql ? fonts.filter((f) => f.toLowerCase().includes(ql)) : fonts;
+      const google = (opts.googleFonts || []).filter((f) => !ql || f.name.toLowerCase().includes(ql));
+      const googleNames = new Set(google.map((f) => f.name.toLowerCase()));
+      const matches = (ql ? fonts.filter((f) => f.toLowerCase().includes(ql)) : fonts).filter((f) => !googleNames.has(f.toLowerCase()));
+      const known = fonts.some((f) => f.toLowerCase() === ql) || (opts.googleFonts || []).some((f) => f.name.toLowerCase() === ql);
       const entries = [];
       if (!ql) entries.push({ name: "", text: placeholder });
-      if (q && !fonts.some((f) => f.toLowerCase() === ql)) entries.push({ name: q, text: q, note: "use this name" });
+      if (q && !known) entries.push({ name: q, text: q, note: "use this name" });
+      google.forEach((f) => entries.push({ name: f.name, text: f.name, note: "Google · " + f.category }));
       matches.slice(0, 400).forEach((f) => entries.push({ name: f, text: f }));
       list.textContent = "";
       rows = entries.map((e, i) => {
@@ -140,6 +146,9 @@
       root.classList.add("open");
       search.value = "";
       list.innerHTML = '<div class="fp-empty">Loading fonts…</div>';
+      if (opts.googleFonts && opts.googleFonts.length && window.ZoomTimerCanvas) {
+        window.ZoomTimerCanvas.loadGoogleFonts(opts.googleFonts.map((f) => f.name));
+      }
       loadFonts().then((f) => { fonts = f; if (root.classList.contains("open")) render(); });
       search.focus();
     }

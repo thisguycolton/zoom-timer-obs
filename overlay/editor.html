@@ -66,6 +66,10 @@
   .obs code { color: var(--text); word-break: break-all; }
   .muted { color: var(--muted); font-size: 12px; }
   .hidden { display: none !important; }
+  .field .fp { min-width: 0; --fp-bg: #0b0d11; --fp-line: var(--line); --fp-pop: var(--panel); --fp-hi: var(--accent); }
+  /* Open the list leftwards from the control so it doesn't push the side panel sideways. */
+  .field .fp-pop { left: auto; right: 0; width: 250px; }
+  aside.right { overflow-x: hidden; }
 </style>
 </head>
 <body>
@@ -129,6 +133,7 @@
 </div>
 <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="hidden">
 <script src="canvas-render.js"></script>
+<script src="fontpicker.js"></script>
 <script src="editor.js"></script>
 </body>
 </html>
