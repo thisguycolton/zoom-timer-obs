@@ -9,6 +9,9 @@ final class HTTPServer {
     private let overlayDirectory: URL
     private let currentState: () -> TimerState
     private var eventClients: [ObjectIdentifier: NWConnection] = [:]
+    private let layoutStore = LayoutStore()
+    /// Request bodies are only accepted for POST /layout; a background image may be inlined as a data URL.
+    private static let maxBodySize = 12 * 1024 * 1024
 
     init(port: UInt16, overlayDirectory: URL, queue: DispatchQueue, currentState: @escaping () -> TimerState) throws {
         let parameters = NWParameters.tcp
@@ -43,6 +46,14 @@ final class HTTPServer {
         }
     }
 
+    /// Tells /events clients (the canvas overlay in OBS) to re-fetch /layout.
+    private func broadcastLayoutChanged() {
+        let message = Data("event: layout\ndata: {}\n\n".utf8)
+        for connection in eventClients.values {
+            connection.send(content: message, completion: .contentProcessed { _ in })
+        }
+    }
+
     func heartbeat() {
         for connection in eventClients.values {
             connection.send(content: Data(": ping\n\n".utf8), completion: .contentProcessed { _ in })
@@ -58,7 +69,17 @@ final class HTTPServer {
             if let data { buffer.append(data) }
             if let end = buffer.range(of: Data("\r\n\r\n".utf8)) {
                 let head = String(decoding: buffer[..<end.lowerBound], as: UTF8.self)
-                self.handle(head: head, on: connection)
+                let length = Self.contentLength(head)
+                let body = buffer[end.upperBound...]
+                if length > Self.maxBodySize {
+                    self.respond(connection, status: "413 Payload Too Large", body: Data())
+                } else if body.count >= length {
+                    self.handle(head: head, body: Data(body.prefix(length)), on: connection)
+                } else if error != nil || isComplete {
+                    connection.cancel()
+                } else {
+                    self.receiveRequest(on: connection, buffer: buffer)
+                }
             } else if error != nil || isComplete || buffer.count > 64 * 1024 {
                 connection.cancel()
             } else {
@@ -67,13 +88,48 @@ final class HTTPServer {
         }
     }
 
-    private func handle(head: String, on connection: NWConnection) {
+    private static func header(_ name: String, in head: String) -> String? {
+        for line in head.split(separator: "\r\n").dropFirst() {
+            let pair = line.split(separator: ":", maxSplits: 1)
+            if pair.count == 2, pair[0].trimmingCharacters(in: .whitespaces).lowercased() == name {
+                return pair[1].trimmingCharacters(in: .whitespaces)
+            }
+        }
+        return nil
+    }
+
+    private static func contentLength(_ head: String) -> Int {
+        header("content-length", in: head).flatMap(Int.init) ?? 0
+    }
+
+    private func handle(head: String, body: Data, on connection: NWConnection) {
         let parts = head.split(separator: "\r\n", maxSplits: 1).first?.split(separator: " ") ?? []
         guard parts.count >= 2 else { return respond(connection, status: "400 Bad Request", body: Data()) }
         let method = String(parts[0])
         let path = String(parts[1].split(separator: "?", maxSplits: 1).first ?? "/")
 
         if method == "OPTIONS" { return respond(connection, status: "204 No Content", body: Data()) }
+        if path == "/layout" && (method == "POST" || method == "PUT") {
+            guard (try? JSONSerialization.jsonObject(with: body)) is [String: Any] else {
+                return respond(connection, status: "400 Bad Request", body: Data("Expected a JSON object".utf8))
+            }
+            do {
+                try layoutStore.save(body)
+            } catch {
+                return respond(connection, status: "500 Internal Server Error", body: Data("\(error)".utf8))
+            }
+            broadcastLayoutChanged()
+            return respond(connection, status: "204 No Content", body: Data())
+        }
+        if path == "/assets" && method == "POST" {
+            do {
+                let url = try layoutStore.saveAsset(body, contentType: Self.header("content-type", in: head) ?? "")
+                let json = try JSONSerialization.data(withJSONObject: ["url": url])
+                return respond(connection, status: "201 Created", contentType: "application/json", body: json)
+            } catch {
+                return respond(connection, status: "415 Unsupported Media Type", body: Data("Upload a PNG, JPEG, GIF, WebP or SVG image".utf8))
+            }
+        }
         guard method == "GET" || method == "HEAD" else {
             return respond(connection, status: "405 Method Not Allowed", body: Data())
         }
@@ -81,10 +137,18 @@ final class HTTPServer {
         switch path {
         case "/state":
             respond(connection, status: "200 OK", contentType: "application/json", body: currentState().json())
+        case "/layout":
+            if let layout = layoutStore.load() {
+                respond(connection, status: "200 OK", contentType: "application/json", body: layout)
+            } else {
+                respond(connection, status: "404 Not Found", contentType: "application/json", body: Data("null".utf8))
+            }
         case "/events":
             openEventStream(connection)
+        case _ where path.hasPrefix("/assets/"):
+            serveFile(path: String(path.dropFirst("/assets".count)), from: layoutStore.assetsDirectory, on: connection)
         default:
-            serveFile(path: path, on: connection)
+            serveFile(path: path, from: overlayDirectory, on: connection)
         }
     }
 
@@ -122,14 +186,14 @@ final class HTTPServer {
         }
     }
 
-    private func serveFile(path: String, on connection: NWConnection) {
+    private func serveFile(path: String, from directory: URL, on connection: NWConnection) {
         var relative = path.removingPercentEncoding ?? path
         if relative.hasSuffix("/") { relative += "index.html" }
         let components = relative.split(separator: "/").map(String.init)
         guard !components.contains(where: { $0 == ".." || $0.hasPrefix(".") }) else {
             return respond(connection, status: "404 Not Found", body: Data("Not found".utf8))
         }
-        let url = components.reduce(overlayDirectory) { $0.appendingPathComponent($1) }
+        let url = components.reduce(directory) { $0.appendingPathComponent($1) }
         guard let data = try? Data(contentsOf: url) else {
             return respond(connection, status: "404 Not Found", body: Data("Not found".utf8))
         }
@@ -142,7 +206,8 @@ final class HTTPServer {
             + "Content-Length: \(body.count)\r\n"
             + "Cache-Control: no-cache\r\n"
             + "Access-Control-Allow-Origin: *\r\n"
-            + "Access-Control-Allow-Methods: GET, OPTIONS\r\n"
+            + "Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS\r\n"
+            + "Access-Control-Allow-Headers: Content-Type\r\n"
             + "Connection: close\r\n\r\n"
         connection.send(content: Data(head.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })
     }

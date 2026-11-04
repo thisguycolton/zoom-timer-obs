@@ -26,7 +26,30 @@ Then open **http://127.0.0.1:17845/config.html** in your browser to pick a style
 warning thresholds, labels) with a live preview, and copy the URL it gives you. In OBS add a
 **Browser Source** with that URL (width 800, height 400 is a good start).
 
-## Overlay options
+## Free-form layout editor (drag & resize)
+
+Open **http://127.0.0.1:17845/editor.html** to build the overlay on a 1920×1080 canvas (size is adjustable):
+
+- Drag any part to move it, drag its handles to resize (hold ⇧ on a corner to keep proportions).
+  Text scales to fill its box.
+- Parts: clock, label, progress bar, progress ring, percent, time's-up banner, panels (background boxes)
+  and images. Add as many as you like, show/hide them, reorder layers, duplicate (⌘D), delete (⌫).
+- Per part: colors (or follow the green → yellow → red progress color), font, weight, alignment,
+  background color/opacity, corner radius, opacity, and whether it shows always, only before zero,
+  or only at time's up/overtime.
+- Canvas: transparent by default, or a background color or uploaded image. Theme colors, warning
+  thresholds and time format apply to everything.
+- Snap to grid, arrow-key nudging (⇧ for 10 px), undo/redo (⌘Z / ⇧⌘Z). Preview with a looping demo,
+  a fixed state, or the live Zoom timer.
+
+Changes save automatically to `~/Library/Application Support/ZoomTimerBridge/layout.json`
+(uploaded images go in `assets/` next to it). In OBS add a **Browser Source** with URL
+**http://127.0.0.1:17845/canvas.html** and the canvas size (1920×1080 by default); it reloads the
+layout live whenever you change it in the editor. `canvas.html?demo=1` shows a fake timer.
+
+## Simple overlay options
+
+The simpler single-widget overlay at `/` is still available.
 
 The overlay (`overlay/index.html`) is styled with URL parameters, which `config.html` builds for you:
 
@@ -52,7 +75,9 @@ also override them in OBS's Browser Source **Custom CSS** box, e.g. `:root { --s
 | --- | --- |
 | `/` | Static files from `overlay/` (the OBS overlay) |
 | `/state` | Current state as JSON |
-| `/events` | Server-Sent Events: the state JSON on every change, plus a `: ping` comment every 5 s |
+| `/events` | Server-Sent Events: the state JSON on every change, a `layout` event when the layout is saved, and a `: ping` comment every 5 s |
+| `/layout` | GET the saved editor layout (404 if none yet); POST a JSON layout to save it |
+| `/assets` | POST an image (PNG, JPEG, GIF, WebP, SVG) as the raw body; returns `{"url": "/assets/<name>"}` |
 
 All responses send `Access-Control-Allow-Origin: *`.
 
