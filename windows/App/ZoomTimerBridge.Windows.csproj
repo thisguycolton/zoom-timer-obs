@@ -24,4 +24,8 @@
     <!-- The shared overlay (same files the macOS app serves) goes next to the exe. -->
     <None Include="..\..\overlay\**\*" LinkBase="overlay" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
+  <!-- The WPF SDK drops System.IO from the implicit usings; add it back. -->
+  <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
 </Project>
