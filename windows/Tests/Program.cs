@@ -88,7 +88,7 @@ Console.WriteLine("JSON");
     t.Update(new RawReading.Idle(180));
     using var doc = JsonDocument.Parse(t.State.ToJson());
     var keys = doc.RootElement.EnumerateObject().Select(p => p.Name).ToArray();
-    Check("same keys as macOS helper", keys.SequenceEqual(new[] { "display", "overtimeSeconds", "percentRemaining", "remainingSeconds", "status", "totalSeconds", "updatedAt" }), string.Join(",", keys));
+    Check("same keys as macOS helper", keys.SequenceEqual(new[] { "display", "overlayHidden", "overtimeSeconds", "percentRemaining", "remainingSeconds", "status", "totalSeconds", "updatedAt" }), string.Join(",", keys));
     Check("status name", doc.RootElement.GetProperty("status").GetString() == "idle");
     Check("null overtime", doc.RootElement.GetProperty("overtimeSeconds").ValueKind == JsonValueKind.Null);
     Check("timesup name", TimerState.StatusName(TimerStatus.TimesUp) == "timesup");
