@@ -14,13 +14,27 @@ There's also a **Windows version** (tray app using UI Automation) in [`windows/`
 
 ## Requirements
 
-- macOS 13 or later, Zoom desktop app, Swift toolchain (Xcode or Command Line Tools)
-- The Timer app open in a Zoom meeting (popped out as "Zoom Apps - Timer" or popped in)
-- **Accessibility permission** for whatever launches the helper: System Settings ›
-  Privacy & Security › Accessibility › turn on your terminal app (or the `ZoomTimerBridge`
-  binary if you run it directly). The helper prints a warning if the permission is missing.
+Both versions need the **Zoom desktop app** with the **Timer app** open in a meeting (popped out or
+popped in), and **OBS Studio** with a Browser Source. Everything runs on the same computer.
 
-## Build and run
+### Mac
+
+- macOS 13 (Ventura) or later, Apple silicon or Intel
+- **Accessibility permission** for Zoom Timer Bridge: System Settings › Privacy & Security ›
+  Accessibility (the app asks on first launch). When running from source, allow your terminal app instead.
+- To build from source: Swift toolchain (Xcode or Command Line Tools)
+
+### Windows (PC)
+
+- Windows 10 or 11, 64-bit: the `x64` zip for most PCs, `arm64` for Snapdragon/ARM laptops
+- Nothing else to install: the app is self-contained, so .NET isn't needed to run it
+- No admin rights or special permission: Windows lets apps read other windows through UI Automation
+- On first launch, SmartScreen may warn about an unrecognized app: **More info › Run anyway**
+- To build from source: .NET 8 SDK, then `windows\build.ps1` in PowerShell
+- Not yet tested against a real Zoom meeting on Windows; if the tray says it can't find the timer,
+  use **Save Diagnostics to Desktop** from the tray menu and open an issue with the file
+
+## Build and run (Mac)
 
 ```bash
 scripts/build-app.sh            # builds dist/Zoom Timer Bridge.app and dist/ZoomTimerBridge-1.0.0.zip
