@@ -16,6 +16,7 @@ sealed class TrayApp : System.Windows.Forms.ApplicationContext
     readonly NotifyIcon icon;
     readonly ToolStripMenuItem statusLine = new("Starting…") { Enabled = false };
     readonly ToolStripMenuItem loginItem = new("Start with Windows");
+    readonly ToolStripMenuItem hideItem = new("Hide Overlay") { CheckOnClick = false };
     readonly SynchronizationContext ui;
     TimerState state = new();
 
@@ -26,6 +27,8 @@ sealed class TrayApp : System.Windows.Forms.ApplicationContext
 
         var menu = new ContextMenuStrip();
         menu.Items.Add(statusLine);
+        hideItem.Click += (_, _) => bridge.OverlayHidden = !bridge.OverlayHidden;
+        menu.Items.Add(hideItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Open Layout Editor", null, (_, _) => Open("/editor.html"));
         menu.Items.Add("Copy OBS URL", null, (_, _) => System.Windows.Forms.Clipboard.SetText(bridge.BaseUrl + "/canvas.html"));
@@ -43,15 +46,18 @@ sealed class TrayApp : System.Windows.Forms.ApplicationContext
         icon.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) Open("/editor.html"); };
 
         bridge.Changed += s => ui.Post(_ => { state = s; Refresh(); }, null);
+        bridge.OverlayHiddenChanged += _ => ui.Post(_ => Refresh(), null);
         Refresh();
     }
 
     void Refresh()
     {
-        statusLine.Text = Describe(state);
+        var hidden = bridge.OverlayHidden;
+        statusLine.Text = Describe(state) + (hidden ? " · overlay hidden" : "");
+        hideItem.Checked = hidden;
         loginItem.Checked = IsLoginEnabled();
         // Tooltip text is limited to 63 characters.
-        var tip = "Zoom Timer Bridge · " + Describe(state);
+        var tip = (hidden ? "Zoom Timer Bridge (hidden) · " : "Zoom Timer Bridge · ") + Describe(state);
         icon.Text = tip.Length > 63 ? tip[..63] : tip;
     }
 

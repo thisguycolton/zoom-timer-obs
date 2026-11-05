@@ -163,6 +163,25 @@ Console.WriteLine("Server");
     Check("OPTIONS 204", http.SendAsync(new HttpRequestMessage(HttpMethod.Options, "/layout")).Result.StatusCode == HttpStatusCode.NoContent);
     var fonts = http.GetStringAsync("/fonts").Result;
     Check("/fonts sorted, deduped, hidden dropped", fonts == "[\"alpha\",\"Zeta\"]", fonts);
+    var vis = http.GetStringAsync("/visibility").Result;
+    Check("/visibility starts visible", vis == "{\"hidden\":false}", vis);
+    Check("state reports overlayHidden false", http.GetStringAsync("/state").Result.Contains("\"overlayHidden\":false"));
+    var hiddenEvents = 0;
+    bridge.OverlayHiddenChanged += _ => hiddenEvents++;
+    var hide = http.PostAsync("/visibility/hide", null).Result.Content.ReadAsStringAsync().Result;
+    Check("POST /visibility/hide", hide == "{\"hidden\":true}", hide);
+    var pushed = NextData();
+    Check("hiding pushes state over SSE", pushed?.Contains("\"overlayHidden\":true") == true, pushed ?? "timeout");
+    Check("state reports overlayHidden true", http.GetStringAsync("/state").Result.Contains("\"overlayHidden\":true"));
+    Check("GET /visibility/toggle shows", http.GetStringAsync("/visibility/toggle").Result == "{\"hidden\":false}");
+    Check("toggle pushes state over SSE", NextData()?.Contains("\"overlayHidden\":false") == true);
+    Check("/visibility/show is idempotent", http.GetStringAsync("/visibility/show").Result == "{\"hidden\":false}");
+    Check("OverlayHiddenChanged fired twice", hiddenEvents == 2, hiddenEvents.ToString());
+    bridge.OverlayHidden = true;
+    Check("menu toggle reflected in /visibility", http.GetStringAsync("/visibility").Result == "{\"hidden\":true}");
+    Check("menu toggle pushes state over SSE", NextData()?.Contains("\"overlayHidden\":true") == true);
+    bridge.OverlayHidden = false;
+    NextData();
     Check("DELETE 405", http.DeleteAsync("/state").Result.StatusCode == HttpStatusCode.MethodNotAllowed);
 
     try

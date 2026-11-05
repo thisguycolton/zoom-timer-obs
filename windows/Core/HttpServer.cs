@@ -24,6 +24,27 @@ public sealed class HttpServer : IDisposable
 
     public int Port { get; }
 
+    volatile bool overlayHidden;
+
+    /// <summary>Raised (on the caller's thread) when the overlay is hidden or shown, from the menu or an endpoint.</summary>
+    public event Action<bool>? OverlayHiddenChanged;
+
+    /// <summary>When true, the OBS overlays fade to fully transparent. Not persisted: every launch starts visible.
+    /// Changing it re-sends the current state to /events clients right away.</summary>
+    public bool OverlayHidden
+    {
+        get => overlayHidden;
+        set
+        {
+            if (overlayHidden == value) return;
+            overlayHidden = value;
+            Broadcast(currentState());
+            OverlayHiddenChanged?.Invoke(value);
+        }
+    }
+
+    byte[] StateJson(TimerState state) => state.ToJson(overlayHidden);
+
     /// <summary>Lists installed font family names for GET /fonts (platform-specific; empty if unset).</summary>
     public Func<IEnumerable<string>>? FontProvider { get; set; }
     byte[]? fontsJson;
@@ -57,7 +78,7 @@ public sealed class HttpServer : IDisposable
 
     /// <summary>Sends the state to every /events client.</summary>
     public void Broadcast(TimerState state) =>
-        SendToEventClients(Concat("data: "u8.ToArray(), state.ToJson(), "\n\n"u8.ToArray()));
+        SendToEventClients(Concat("data: "u8.ToArray(), StateJson(state), "\n\n"u8.ToArray()));
 
     public void Heartbeat() => SendToEventClients(": ping\n\n"u8.ToArray());
 
@@ -207,6 +228,19 @@ public sealed class HttpServer : IDisposable
             }
             return false;
         }
+        if (path is "/visibility" or "/visibility/hide" or "/visibility/show" or "/visibility/toggle"
+            && method is "GET" or "POST" or "HEAD")
+        {
+            // GET is allowed for the actions too, so a Stream Deck "open website" button or an OBS hotkey script can use them.
+            switch (path)
+            {
+                case "/visibility/hide": OverlayHidden = true; break;
+                case "/visibility/show": OverlayHidden = false; break;
+                case "/visibility/toggle": OverlayHidden = !OverlayHidden; break;
+            }
+            await Respond(stream, "200 OK", "application/json", JsonSerializer.SerializeToUtf8Bytes(new Dictionary<string, bool> { ["hidden"] = OverlayHidden }));
+            return false;
+        }
         if (method != "GET" && method != "HEAD")
         {
             await Respond(stream, "405 Method Not Allowed", "text/plain; charset=utf-8", Array.Empty<byte>());
@@ -216,7 +250,7 @@ public sealed class HttpServer : IDisposable
         switch (path)
         {
             case "/state":
-                await Respond(stream, "200 OK", "application/json", currentState().ToJson());
+                await Respond(stream, "200 OK", "application/json", StateJson(currentState()));
                 return false;
             case "/layout":
                 var layout = layoutStore.Load();
@@ -272,7 +306,7 @@ public sealed class HttpServer : IDisposable
                    "Connection: keep-alive\r\n" +
                    "Access-Control-Allow-Origin: *\r\n\r\n" +
                    "retry: 1000\n\n";
-        await stream.WriteAsync(Concat(Encoding.UTF8.GetBytes(head), "data: "u8.ToArray(), currentState().ToJson(), "\n\n"u8.ToArray()));
+        await stream.WriteAsync(Concat(Encoding.UTF8.GetBytes(head), "data: "u8.ToArray(), StateJson(currentState()), "\n\n"u8.ToArray()));
         await stream.FlushAsync();
         lock (clientsLock) eventClients.Add(stream);
         // Detect the client going away.

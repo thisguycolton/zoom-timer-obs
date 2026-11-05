@@ -128,13 +128,14 @@ public sealed record TimerState
     public bool SameAs(TimerState o) => Status == o.Status && RemainingSeconds == o.RemainingSeconds &&
         TotalSeconds == o.TotalSeconds && OvertimeSeconds == o.OvertimeSeconds && Display == o.Display;
 
-    public byte[] ToJson()
+    public byte[] ToJson(bool overlayHidden = false)
     {
         using var stream = new MemoryStream();
         using (var w = new Utf8JsonWriter(stream))
         {
             w.WriteStartObject();
             w.WriteString("display", Display);
+            w.WriteBoolean("overlayHidden", overlayHidden);
             WriteNumber(w, "overtimeSeconds", OvertimeSeconds);
             if (PercentRemaining is double p) w.WriteNumber("percentRemaining", p); else w.WriteNull("percentRemaining");
             WriteNumber(w, "remainingSeconds", RemainingSeconds);
