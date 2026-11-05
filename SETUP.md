@@ -1,5 +1,7 @@
 # Setup guide
 
+*Mac instructions first; Windows is [further down](#windows).*
+
 Zoom Timer Bridge puts the timer from Zoom's built-in **Timer** app into OBS, styled however you like.
 It's a small Mac menu bar app: it reads the timer from the Zoom window, and OBS shows it through a
 Browser Source. It never clicks or changes anything in Zoom.
@@ -113,6 +115,48 @@ popping it out.
 **Where are my settings?**
 `~/Library/Application Support/ZoomTimerBridge/`: `layout.json` holds the editor layout, and
 `assets/` holds uploaded images. Delete `layout.json` to start over (or use **Reset layout** in the editor).
+
+---
+
+## Windows
+
+The Windows version works the same way, but sits in the notification area (bottom right, next to the
+clock) instead of the Mac menu bar. It serves the same editor and overlay at the same address, so the
+OBS steps are identical.
+
+> **Status: new and untested on real Windows hardware.** The timer-reading code follows how the Zoom
+> Timer appears on the Mac. If it says "Waiting for Zoom Timer" while your timer is open, right-click
+> the icon › **Save Diagnostics to Desktop** and send the `ZoomTimerBridge-diagnostics.txt` file it creates.
+
+You'll need Windows 10 or 11 (64-bit; `x64` for most PCs, `arm64` for Snapdragon/ARM laptops), the
+Zoom desktop app with the Timer app, and OBS Studio. Nothing else needs installing: the app includes everything it needs.
+
+1. **Download** `ZoomTimerBridge-Windows-x64-1.0.0.zip` (or `-arm64-`), right-click it › **Extract All…**,
+   and move the **Zoom Timer Bridge** folder somewhere permanent, e.g. `Documents` or `C:\Program Files`.
+   Keep the `overlay` folder next to `ZoomTimerBridge.exe`.
+2. **First launch:** double-click `ZoomTimerBridge.exe`. The app isn't signed, so Windows SmartScreen may say
+   *"Windows protected your PC"*. Click **More info** › **Run anyway**. You only need to do this once.
+3. A **blue timer icon** appears in the notification area. If you don't see it, click the **^** arrow
+   next to the clock. You can drag it out so it's always visible.
+   There's no Accessibility permission to grant on Windows.
+4. **Right-click the icon** for the same menu as on the Mac: the status line, **Open Layout Editor**,
+   **Copy OBS URL**, **Open Simple Setup**, **Start with Windows**, **Save Diagnostics to Desktop**, **Setup Guide**
+   and **Quit**. Left-clicking the icon opens the editor.
+5. Open **Apps › Timer** in your Zoom meeting, then follow [Design your overlay](#4-design-your-overlay)
+   and [Add it to OBS](#5-add-it-to-obs) above. The URL is the same: `http://127.0.0.1:17845/canvas.html`.
+
+**Windows troubleshooting**
+
+- *Stays on "Waiting for Zoom Timer":* if Zoom was started "as administrator", Windows blocks other apps
+  from reading it. Start Zoom normally, or run Zoom Timer Bridge as administrator too. Otherwise send the
+  diagnostics file (see the note above).
+- *Firewall prompt:* the app only listens on `127.0.0.1` (this PC), so you can choose **Cancel**; OBS
+  still works.
+- *"Port 17845 is unavailable":* another copy is already running; look for its icon behind the **^** arrow.
+- *Settings location:* `%APPDATA%\ZoomTimerBridge\` (`layout.json` and `assets\`). Copy `layout.json`
+  from a Mac's `~/Library/Application Support/ZoomTimerBridge/` to use the same design on both.
+- *Building it yourself:* install the .NET 8 SDK, then run `windows\build.ps1` in PowerShell. Zips go to `dist\`.
+  There's also a console mode for debugging: `ZoomTimerBridge.exe --console`, and `--dump` prints diagnostics.
 
 ---
 
