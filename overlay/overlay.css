@@ -16,7 +16,8 @@
 }
 
 html, body { margin: 0; background: transparent; overflow: hidden; }
-body { font-family: var(--font); color: var(--text); }
+body { font-family: var(--font); color: var(--text); transition: opacity .3s ease; }
+body.overlay-hidden { opacity: 0; }
 
 .timer {
   display: inline-flex; flex-direction: column; gap: 0.12em;

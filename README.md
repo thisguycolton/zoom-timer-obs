@@ -94,6 +94,28 @@ The overlay (`overlay/index.html`) is styled with URL parameters, which `config.
 For deeper changes, every color and size is a CSS variable in `overlay/overlay.css`, so you can
 also override them in OBS's Browser Source **Custom CSS** box, e.g. `:root { --size: 140px; --ok: #00e5ff; }`.
 
+## Hiding the overlay
+
+**Hide Overlay** in the menu bar (Mac) or tray (Windows) menu fades every OBS overlay to fully
+transparent without touching Zoom's timer; choose it again to fade back in. It's not saved, so
+the app always starts with the overlay visible. While it's hidden the menu shows a check mark and
+"· overlay hidden", the Mac menu bar icon turns into an eye with a slash, and the layout editor
+shows a **Hidden in OBS** notice with a **Show** button (the editor itself keeps drawing).
+
+The same switch is available over HTTP, so a Stream Deck "Website" button (with "GET request in
+background" ticked), an OBS hotkey script or a bookmark can flip it. Each URL accepts GET or POST and
+returns `{"hidden": true}` or `{"hidden": false}`:
+
+| URL | Effect |
+| --- | --- |
+| `http://127.0.0.1:17845/visibility` | Just report the current setting |
+| `http://127.0.0.1:17845/visibility/hide` | Hide the overlay |
+| `http://127.0.0.1:17845/visibility/show` | Show it again |
+| `http://127.0.0.1:17845/visibility/toggle` | Flip between hidden and shown |
+
+The state JSON also carries `"overlayHidden": true/false`, and every change is pushed over `/events`
+straight away.
+
 ## Endpoints
 
 | Path | Description |
@@ -102,6 +124,7 @@ also override them in OBS's Browser Source **Custom CSS** box, e.g. `:root { --s
 | `/state` | Current state as JSON |
 | `/events` | Server-Sent Events: the state JSON on every change, a `layout` event when the layout is saved, and a `: ping` comment every 5 s |
 | `/layout` | GET the saved editor layout (404 if none yet); POST a JSON layout to save it |
+| `/visibility`, `/visibility/hide`, `/visibility/show`, `/visibility/toggle` | Hide Overlay toggle (GET or POST); see [Hiding the overlay](#hiding-the-overlay) |
 | `/assets` | POST an image (PNG, JPEG, GIF, WebP, SVG) as the raw body; returns `{"url": "/assets/<name>"}` |
 
 All responses send `Access-Control-Allow-Origin: *`.

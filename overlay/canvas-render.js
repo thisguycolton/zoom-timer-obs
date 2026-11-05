@@ -118,7 +118,7 @@
     options = options || {};
     const root = document.createElement("div");
     root.className = "ztc-root";
-    root.style.cssText = "position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;";
+    root.style.cssText = "position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;transition:opacity 300ms ease;";
     stage.appendChild(root);
 
     let layout = normalize(null);
@@ -303,6 +303,8 @@
       const hiddenAll = !options.alwaysVisible &&
         (["offline", "zoomClosed", "notFound"].indexOf(status) >= 0 || (!t.showIdle && status === "idle"));
       root.style.visibility = hiddenAll ? "hidden" : "visible";
+      // Hide Overlay toggle (menu bar / tray, or /visibility/hide). The editor keeps drawing regardless.
+      root.style.opacity = !options.alwaysVisible && state && state.overlayHidden ? "0" : "1";
       root.className = root.className.replace(/\bs-\S+/g, "").trim() + " s-" + status;
       const clock = clockText();
       for (const id in nodes) {

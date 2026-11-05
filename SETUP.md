@@ -77,7 +77,18 @@ Edits you make in the editor appear in OBS within a second. You don't need to re
 **Simpler option:** menu bar icon › **Open Simple Setup** gives a single ready-made widget (bar, ring
 or text) styled with a few options, and a URL to paste into OBS the same way (800×400 is a good size).
 
-## 6. Start at Login (optional)
+## 6. Hide the overlay when you need to (optional)
+
+Menu bar icon › **Hide Overlay** (on Windows, the tray icon's menu) fades the timer out of OBS, e.g.
+between speakers, without stopping Zoom's timer. Choose it again to bring it back. While it's hidden
+there's a check mark next to it, the Mac menu bar icon changes to an eye with a slash, and the layout
+editor shows **Hidden in OBS** with a **Show** button. It always starts visible when the app opens.
+
+**Stream Deck or hotkeys:** add a Stream Deck **Website** action with the URL
+`http://127.0.0.1:17845/visibility/toggle` and tick **GET request in background**. Press it to hide
+or show. `/visibility/hide` and `/visibility/show` do just one or the other.
+
+## 7. Start at Login (optional)
 
 Menu bar icon › **Start at Login** keeps the app running after restarts. It only works once the app
 is in your Applications folder.

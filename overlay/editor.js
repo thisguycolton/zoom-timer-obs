@@ -561,6 +561,18 @@
     });
   }
 
+  // Hide Overlay toggle: the editor always draws, but says when OBS is showing nothing.
+  function watchVisibility() {
+    const source = new EventSource("/events");
+    source.onmessage = (e) => {
+      try { $("hiddenNote").classList.toggle("hidden", !JSON.parse(e.data).overlayHidden); } catch (err) {}
+    };
+  }
+  $("showOverlay").addEventListener("click", () => {
+    fetch("/visibility/show", { method: "POST" }).then(() => $("hiddenNote").classList.add("hidden")).catch(() => {});
+  });
+
   setPreview("demo");
   load();
+  watchVisibility();
 })();
