@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoom Timer Layout Editor</title>
+<style>
+  :root { color-scheme: dark; --bg: #0e1015; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a; --text: #e8eaf0;
+          --muted: #8f98a8; --accent: #4f8cff; --danger: #ff5d5d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+               font: 13px/1.4 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr; }
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; }
+  .spacer { flex: 1; }
+  .status { color: var(--muted); font-size: 12px; min-width: 90px; }
+  button, select, input { font: inherit; color: var(--text); }
+  button { background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: #3a4150; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.icon { padding: 3px 7px; }
+  button.danger { color: var(--danger); }
+  select, input[type=text], input[type=number], input:not([type]) {
+    background: #0b0d11; border: 1px solid var(--line); border-radius: 6px; padding: 4px 7px; min-width: 0; }
+  input[type=color] { width: 28px; height: 26px; padding: 0 2px; background: #0b0d11; border: 1px solid var(--line); border-radius: 6px; flex: none; }
+  input[type=range] { width: 100%; }
+  .layout { display: grid; grid-template-columns: 210px 1fr 270px; min-height: 0; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 12px; }
+  aside.right { border-right: 0; border-left: 1px solid var(--line); }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 14px 0 8px; }
+  h2:first-child { margin-top: 0; }
+  .parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+  .parts li { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+  .parts li:hover { background: var(--panel2); }
+  .parts li.sel { background: rgba(79,140,255,.18); outline: 1px solid rgba(79,140,255,.5); }
+  .parts li .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .parts li.off .name { opacity: .45; text-decoration: line-through; }
+  .eye { background: none; border: 0; padding: 0 2px; opacity: .8; }
+  .add { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .add button { font-size: 12px; padding: 4px 6px; }
+  main { position: relative; min-width: 0; min-height: 0; display: grid; grid-template-rows: 1fr auto; }
+  #stageWrap { position: relative; margin: 16px; min-height: 0; }
+  #stage { position: absolute; inset: 0; left: 0; top: 0; right: 0; bottom: 0; }
+  .ztc-root { outline: 1px dashed rgba(255,255,255,.3); box-shadow: 0 0 0 9999px rgba(0,0,0,.35); }
+  #stageWrap { background: #2a2d34; border-radius: 8px; overflow: hidden; }
+  .ztc-root .ztc-item { cursor: move; }
+  .ztc-root.grid-on::after { content: ""; position: absolute; inset: 0; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size: var(--grid) var(--grid); }
+  .sel-box { position: absolute; border: 2px solid var(--accent); pointer-events: none; z-index: 9999; }
+  .sel-box .h { position: absolute; background: #fff; border: 2px solid var(--accent); pointer-events: auto; border-radius: 2px; }
+  .hover-box { position: absolute; border: 1px dashed rgba(79,140,255,.8); pointer-events: none; z-index: 9998; }
+  .footer { display: flex; gap: 10px; align-items: center; padding: 0 16px 12px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+  .footer kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font: 11px ui-monospace, Menlo, monospace; }
+  .field { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .field > span { color: var(--muted); font-size: 12px; }
+  .field .row { display: flex; gap: 5px; align-items: center; min-width: 0; }
+  .field .row > input[type=text], .field .row > input:not([type]) { flex: 1; width: 100%; }
+  .grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .grid4 label { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; }
+  .grid4 input { width: 100%; }
+  .check { display: flex; gap: 6px; align-items: center; margin-bottom: 7px; }
+  .actions { display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .obs { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12px; color: var(--muted); }
+  .obs code { color: var(--text); word-break: break-all; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .hidden { display: none !important; }
+  .field .fp { min-width: 0; --fp-bg: #0b0d11; --fp-line: var(--line); --fp-pop: var(--panel); --fp-hi: var(--accent); }
+  /* Open the list leftwards from the control so it doesn't push the side panel sideways. */
+  .field .fp-pop { left: auto; right: 0; width: 250px; }
+  aside.right { overflow-x: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Zoom Timer layout</h1>
+  <label class="muted">Preview
+    <select id="preview">
+      <option value="demo">Demo (looping)</option>
+      <option value="live">Live from Zoom</option>
+      <option value="running">Running</option>
+      <option value="warn">Warning</option>
+      <option value="danger">Danger</option>
+      <option value="timesup">Time's up</option>
+      <option value="overtime">Overtime</option>
+      <option value="paused">Paused</option>
+      <option value="idle">Idle</option>
+    </select>
+  </label>
+  <label class="check" style="margin:0"><input type="checkbox" id="snap" checked> Snap</label>
+  <input type="number" id="gridSize" value="10" min="1" max="200" style="width:56px" title="Grid size (px)">
+  <label class="check" style="margin:0"><input type="checkbox" id="showGrid"> Grid</label>
+  <button id="undo" title="Undo (⌘Z)">Undo</button>
+  <button id="redo" title="Redo (⇧⌘Z)">Redo</button>
+  <span class="spacer"></span>
+  <span class="status" id="saveStatus"></span>
+  <button id="reset" class="danger">Reset layout</button>
+  <button id="copyUrl" class="primary">Copy OBS URL</button>
+</header>
+<div class="layout">
+  <aside>
+    <h2>Parts</h2>
+    <ul class="parts" id="parts"></ul>
+    <h2>Add</h2>
+    <div class="add">
+      <button data-add="clock">Clock</button>
+      <button data-add="label">Label</button>
+      <button data-add="bar">Bar</button>
+      <button data-add="ring">Ring</button>
+      <button data-add="percent">Percent</button>
+      <button data-add="banner">Banner</button>
+      <button data-add="panel">Panel</button>
+      <button data-add="image">Image</button>
+    </div>
+    <h2>In OBS</h2>
+    <div class="obs">
+      Add a <b>Browser Source</b> with URL<br><code id="obsUrl"></code><br>
+      Width × height: <code id="obsSize"></code>. Saved changes show up in OBS right away.
+    </div>
+  </aside>
+  <main>
+    <div id="stageWrap"><div id="stage"></div></div>
+    <div class="footer">
+      <span>Drag to move · handles to resize</span>
+      <span><kbd>←↑→↓</kbd> nudge (<kbd>⇧</kbd> ×10)</span>
+      <span><kbd>⌫</kbd> delete</span>
+      <span><kbd>⌘D</kbd> duplicate</span>
+      <span><kbd>⇧</kbd>-drag a corner keeps proportions</span>
+    </div>
+  </main>
+  <aside class="right" id="props"></aside>
+</div>
+<input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" class="hidden">
+<script src="canvas-render.js"></script>
+<script src="fontpicker.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

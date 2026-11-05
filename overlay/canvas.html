@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Zoom Timer Canvas</title>
+<!--
+  OBS Browser Source for the free-form layout built in editor.html. It scales the saved
+  1920×1080 (or custom) canvas to whatever size the Browser Source is, and reloads the layout
+  live whenever it's saved in the editor. Transparent unless the layout sets a background.
+  Optional URL parameter: ?source=http://127.0.0.1:17845 when this page isn't served by the helper.
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  #stage { position: absolute; inset: 0; left: 0; top: 0; right: 0; bottom: 0; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="canvas-render.js"></script>
+<script>
+  (function () {
+    const params = new URLSearchParams(location.search);
+    const base = (params.get("source") || "").replace(/\/$/, "");
+    const renderer = ZoomTimerCanvas.createRenderer(document.getElementById("stage"));
+
+    function loadLayout() {
+      return fetch(base + "/layout", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
+        .then((layout) => renderer.setLayout(layout));
+    }
+
+    if (params.get("demo") === "1") {
+      const seq = ZoomTimerCanvas.demoStates(30);
+      let i = 0;
+      loadLayout().then(() => setInterval(() => renderer.setState(seq[i++ % seq.length]), 1000));
+      return;
+    }
+
+    let offlineTimer;
+    loadLayout().then(() => {
+      const events = new EventSource(base + "/events");
+      events.onmessage = (e) => {
+        clearTimeout(offlineTimer);
+        try { renderer.setState(JSON.parse(e.data)); } catch (err) {}
+      };
+      events.addEventListener("layout", loadLayout);
+      events.onopen = loadLayout; // pick up edits made while disconnected
+      events.onerror = () => {
+        clearTimeout(offlineTimer);
+        offlineTimer = setTimeout(() => renderer.setState(null), 4000);
+      };
+    });
+  })();
+</script>
+</body>
+</html>

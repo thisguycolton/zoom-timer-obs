@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Zoom Timer</title>
+<link rel="stylesheet" href="overlay.css">
+</head>
+<body class="layout-bar">
+<div class="timer" id="timer" hidden>
+  <div class="row"><span class="label" id="label"></span><span class="pct" id="pct"></span></div>
+  <div class="ring">
+    <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="46"/><circle class="fill" id="ringFill" cx="50" cy="50" r="46"/></svg>
+    <span class="clock" id="ringClock">--:--</span>
+  </div>
+  <div class="row"><span class="clock" id="clock">--:--</span></div>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="banner" id="banner"></div>
+</div>
+<script src="overlay.js"></script>
+</body>
+</html>

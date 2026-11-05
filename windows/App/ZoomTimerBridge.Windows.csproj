@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- UseWPF brings in UIAutomationClient / UIAutomationTypes (System.Windows.Automation). -->
+    <UseWPF>true</UseWPF>
+    <!-- Lets the project compile on macOS/Linux too (it only runs on Windows). -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>ZoomTimerBridge</AssemblyName>
+    <RootNamespace>ZoomTimerBridge</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>Zoom Timer Bridge</Product>
+    <Description>Reads Zoom's Timer app and shows it in OBS.</Description>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>AppIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\ZoomTimerBridge.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The shared overlay (same files the macOS app serves) goes next to the exe. -->
+    <None Include="..\..\overlay\**\*" LinkBase="overlay" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+  <!-- The WPF SDK drops System.IO from the implicit usings; add it back. -->
+  <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
+</Project>
