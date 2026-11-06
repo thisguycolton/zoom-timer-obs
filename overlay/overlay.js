@@ -64,12 +64,14 @@
     const pa = rgb(a), pb = rgb(b);
     if (!pa || !pb) return t >= 0.5 ? b : a;
     t = Math.min(1, Math.max(0, t));
-    return `rgb(${pa.map((c, i) => Math.round(c + (pb[i] - c) * t)).join(",")})`;
+    const c = pa.map((v, i) => v + (pb[i] - v) * t);
+    return `rgba(${c.slice(0, 3).map(Math.round).join(",")},${Math.round(c[3] * 1000) / 1000})`;
   }
+  /** [r, g, b, a] for any CSS color. */
   function rgb(c) {
     const probe = document.createElement("span"); probe.style.color = c; document.body.appendChild(probe);
     const m = getComputedStyle(probe).color.match(/\d+(\.\d+)?/g); probe.remove();
-    return m ? m.slice(0, 3).map(Number) : null;
+    return m ? m.slice(0, 3).map(Number).concat(m.length > 3 ? Number(m[3]) : 1) : null;
   }
 
   function render(s) {

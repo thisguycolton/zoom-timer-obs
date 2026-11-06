@@ -122,13 +122,19 @@
     return layout;
   }
 
+  /** Applies an extra opacity to a hex or rgb()/rgba() color (other colors are returned as-is). */
   function rgba(color, opacity) {
     if (!color) return "transparent";
     if (opacity == null || opacity >= 1) return color;
-    const m = /^#?([0-9a-f]{6})$/i.exec(color);
+    const hex = /^#?([0-9a-f]{6})$/i.exec(color);
+    if (hex) {
+      const n = parseInt(hex[1], 16);
+      return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + opacity + ")";
+    }
+    const m = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)$/i.exec(color);
     if (!m) return color;
-    const n = parseInt(m[1], 16);
-    return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + opacity + ")";
+    const a = (m[4] == null ? 1 : Number(m[4])) * opacity;
+    return "rgba(" + m[1] + "," + m[2] + "," + m[3] + "," + Math.round(a * 1000) / 1000 + ")";
   }
 
   function format(seconds, mode) {
