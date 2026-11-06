@@ -14,13 +14,27 @@ There's also a **Windows version** (tray app using UI Automation) in [`windows/`
 
 ## Requirements
 
-- macOS 13 or later, Zoom desktop app, Swift toolchain (Xcode or Command Line Tools)
-- The Timer app open in a Zoom meeting (popped out as "Zoom Apps - Timer" or popped in)
-- **Accessibility permission** for whatever launches the helper: System Settings ›
-  Privacy & Security › Accessibility › turn on your terminal app (or the `ZoomTimerBridge`
-  binary if you run it directly). The helper prints a warning if the permission is missing.
+Both versions need the **Zoom desktop app** with the **Timer app** open in a meeting (popped out or
+popped in), and **OBS Studio** with a Browser Source. Everything runs on the same computer.
 
-## Build and run
+### Mac
+
+- macOS 13 (Ventura) or later, Apple silicon or Intel
+- **Accessibility permission** for Zoom Timer Bridge: System Settings › Privacy & Security ›
+  Accessibility (the app asks on first launch). When running from source, allow your terminal app instead.
+- To build from source: Swift toolchain (Xcode or Command Line Tools)
+
+### Windows (PC)
+
+- Windows 10 or 11, 64-bit: the `x64` zip for most PCs, `arm64` for Snapdragon/ARM laptops
+- Nothing else to install: the app is self-contained, so .NET isn't needed to run it
+- No admin rights or special permission: Windows lets apps read other windows through UI Automation
+- On first launch, SmartScreen may warn about an unrecognized app: **More info › Run anyway**
+- To build from source: .NET 8 SDK, then `windows\build.ps1` in PowerShell
+- Not yet tested against a real Zoom meeting on Windows; if the tray says it can't find the timer,
+  use **Save Diagnostics to Desktop** from the tray menu and open an issue with the file
+
+## Build and run (Mac)
 
 ```bash
 scripts/build-app.sh            # builds dist/Zoom Timer Bridge.app and dist/ZoomTimerBridge-1.0.0.zip
@@ -80,6 +94,28 @@ The overlay (`overlay/index.html`) is styled with URL parameters, which `config.
 For deeper changes, every color and size is a CSS variable in `overlay/overlay.css`, so you can
 also override them in OBS's Browser Source **Custom CSS** box, e.g. `:root { --size: 140px; --ok: #00e5ff; }`.
 
+## Hiding the overlay
+
+**Hide Overlay** in the menu bar (Mac) or tray (Windows) menu fades every OBS overlay to fully
+transparent without touching Zoom's timer; choose it again to fade back in. It's not saved, so
+the app always starts with the overlay visible. While it's hidden the menu shows a check mark and
+"· overlay hidden", the Mac menu bar icon turns into an eye with a slash, and the layout editor
+shows a **Hidden in OBS** notice with a **Show** button (the editor itself keeps drawing).
+
+The same switch is available over HTTP, so a Stream Deck "Website" button (with "GET request in
+background" ticked), an OBS hotkey script or a bookmark can flip it. Each URL accepts GET or POST and
+returns `{"hidden": true}` or `{"hidden": false}`:
+
+| URL | Effect |
+| --- | --- |
+| `http://127.0.0.1:17845/visibility` | Just report the current setting |
+| `http://127.0.0.1:17845/visibility/hide` | Hide the overlay |
+| `http://127.0.0.1:17845/visibility/show` | Show it again |
+| `http://127.0.0.1:17845/visibility/toggle` | Flip between hidden and shown |
+
+The state JSON also carries `"overlayHidden": true/false`, and every change is pushed over `/events`
+straight away.
+
 ## Endpoints
 
 | Path | Description |
@@ -88,6 +124,7 @@ also override them in OBS's Browser Source **Custom CSS** box, e.g. `:root { --s
 | `/state` | Current state as JSON |
 | `/events` | Server-Sent Events: the state JSON on every change, a `layout` event when the layout is saved, and a `: ping` comment every 5 s |
 | `/layout` | GET the saved editor layout (404 if none yet); POST a JSON layout to save it |
+| `/visibility`, `/visibility/hide`, `/visibility/show`, `/visibility/toggle` | Hide Overlay toggle (GET or POST); see [Hiding the overlay](#hiding-the-overlay) |
 | `/assets` | POST an image (PNG, JPEG, GIF, WebP, SVG) as the raw body; returns `{"url": "/assets/<name>"}` |
 
 All responses send `Access-Control-Allow-Origin: *`.

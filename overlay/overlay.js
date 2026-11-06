@@ -63,6 +63,7 @@
   }
 
   function render(s) {
+    document.body.classList.toggle("overlay-hidden", !!s.overlayHidden); // Hide Overlay toggle
     const visible = !["zoomClosed", "notFound", "offline"].includes(s.status) && (opt.showIdle || s.status !== "idle");
     el.timer.hidden = !visible;
     document.body.className = document.body.className.replace(/\bs-\S+/g, "").trim() + " s-" + s.status;

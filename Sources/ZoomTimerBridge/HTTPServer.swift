@@ -11,6 +11,11 @@ final class HTTPServer {
     private let currentState: () -> TimerState
     private var eventClients: [ObjectIdentifier: NWConnection] = [:]
     private let layoutStore = LayoutStore()
+    /// Hide Overlay toggle: in memory only, so every launch starts visible.
+    private(set) var overlayHidden = false
+    /// Called on the server queue after the toggle changes.
+    var onVisibilityChange: ((Bool) -> Void)?
+
     /// Called (on the server queue) if the listener fails, e.g. the port is already in use. Default: exit.
     var onFailure: ((Error) -> Void)?
     /// Request bodies are only accepted for POST /layout; a background image may be inlined as a data URL.
@@ -43,10 +48,27 @@ final class HTTPServer {
 
     /// Sends the state to every /events client.
     func broadcast(_ state: TimerState) {
+        var state = state
+        state.overlayHidden = overlayHidden
         let message = Data("data: ".utf8) + state.json() + Data("\n\n".utf8)
         for connection in eventClients.values {
             connection.send(content: message, completion: .contentProcessed { _ in })
         }
+    }
+
+    /// The timer state as clients see it, including the Hide Overlay flag.
+    private func publicState() -> TimerState {
+        var state = currentState()
+        state.overlayHidden = overlayHidden
+        return state
+    }
+
+    /// Must be called on the server queue. Pushes the change to /events clients right away.
+    func setOverlayHidden(_ hidden: Bool) {
+        guard hidden != overlayHidden else { return }
+        overlayHidden = hidden
+        broadcast(currentState())
+        onVisibilityChange?(hidden)
     }
 
     /// Tells /events clients (the canvas overlay in OBS) to re-fetch /layout.
@@ -112,6 +134,18 @@ final class HTTPServer {
         let path = String(parts[1].split(separator: "?", maxSplits: 1).first ?? "/")
 
         if method == "OPTIONS" { return respond(connection, status: "204 No Content", body: Data()) }
+        // GET or POST, so a Stream Deck "Website" button, a browser bookmark or an OBS script can all use it.
+        if path.hasPrefix("/visibility") && (method == "GET" || method == "POST") {
+            switch path {
+            case "/visibility": break
+            case "/visibility/hide": setOverlayHidden(true)
+            case "/visibility/show": setOverlayHidden(false)
+            case "/visibility/toggle": setOverlayHidden(!overlayHidden)
+            default: return respond(connection, status: "404 Not Found", body: Data("Not found".utf8))
+            }
+            let json = (try? JSONSerialization.data(withJSONObject: ["hidden": overlayHidden])) ?? Data()
+            return respond(connection, status: "200 OK", contentType: "application/json", body: json)
+        }
         if path == "/layout" && (method == "POST" || method == "PUT") {
             guard (try? JSONSerialization.jsonObject(with: body)) is [String: Any] else {
                 return respond(connection, status: "400 Bad Request", body: Data("Expected a JSON object".utf8))
@@ -139,7 +173,7 @@ final class HTTPServer {
 
         switch path {
         case "/state":
-            respond(connection, status: "200 OK", contentType: "application/json", body: currentState().json())
+            respond(connection, status: "200 OK", contentType: "application/json", body: publicState().json())
         case "/fonts":
             respond(connection, status: "200 OK", contentType: "application/json", body: Self.fontFamilies)
         case "/layout":
@@ -175,7 +209,7 @@ final class HTTPServer {
             default: break
             }
         }
-        connection.send(content: Data(head.utf8) + Data("data: ".utf8) + currentState().json() + Data("\n\n".utf8),
+        connection.send(content: Data(head.utf8) + Data("data: ".utf8) + publicState().json() + Data("\n\n".utf8),
                         completion: .contentProcessed { _ in })
         // Detect the client going away.
         watchForClose(connection)

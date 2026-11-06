@@ -7,6 +7,7 @@ final class MenuBarApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let bridge: Bridge
     private var statusItem: NSStatusItem!
     private let statusLine = NSMenuItem(title: "Starting…", action: nil, keyEquivalent: "")
+    private let hideItem = NSMenuItem(title: "Hide Overlay", action: #selector(toggleHidden), keyEquivalent: "h")
     private let permissionItem = NSMenuItem(title: "Grant Accessibility Permission…", action: #selector(openAccessibilitySettings), keyEquivalent: "")
     private let loginItem = NSMenuItem(title: "Start at Login", action: #selector(toggleLogin), keyEquivalent: "")
     private var state = TimerState()
@@ -25,6 +26,8 @@ final class MenuBarApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.delegate = self
         statusLine.isEnabled = false
         menu.addItem(statusLine)
+        hideItem.target = self
+        menu.addItem(hideItem)
         permissionItem.target = self
         menu.addItem(permissionItem)
         menu.addItem(.separator())
@@ -77,10 +80,14 @@ final class MenuBarApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refresh() {
         let trusted = AXIsProcessTrusted()
         permissionItem.isHidden = trusted
-        statusLine.title = trusted ? Self.describe(state) : "Needs Accessibility permission"
+        statusLine.title = (trusted ? Self.describe(state) : "Needs Accessibility permission") + (state.overlayHidden ? " · overlay hidden" : "")
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
 
         // Show the countdown next to the icon while a timer is active.
+        hideItem.state = state.overlayHidden ? .on : .off
+        // An eye-slash icon is the hint that the overlay is hidden in OBS.
+        statusItem.button?.image = NSImage(systemSymbolName: state.overlayHidden ? "eye.slash" : "timer",
+                                           accessibilityDescription: state.overlayHidden ? "Zoom Timer Bridge (overlay hidden)" : "Zoom Timer Bridge")
         let showTime = trusted && [.running, .paused, .timesup, .overtime].contains(state.status)
         statusItem.button?.title = showTime ? " " + state.display : ""
         statusItem.button?.appearsDisabled = !trusted || state.status == .zoomClosed || state.status == .notFound
@@ -128,6 +135,10 @@ final class MenuBarApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
             alert.runModal()
         }
         refresh()
+    }
+
+    @objc private func toggleHidden() {
+        bridge.setOverlayHidden(!state.overlayHidden)
     }
 
     @objc private func quit() { NSApp.terminate(nil) }

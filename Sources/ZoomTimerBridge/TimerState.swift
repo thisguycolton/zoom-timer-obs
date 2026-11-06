@@ -11,6 +11,8 @@ struct TimerState: Equatable {
     var overtimeSeconds: Int?
     var display: String = ""
     var updatedAt = Date()
+    /// Set by the server from its Hide Overlay toggle; the overlays fade out while it's true.
+    var overlayHidden = false
 
     var percentRemaining: Double? {
         guard let remaining = remainingSeconds, let total = totalSeconds, total > 0 else { return nil }
@@ -20,7 +22,7 @@ struct TimerState: Equatable {
     /// Equality ignores `updatedAt` so unchanged polls aren't broadcast.
     static func == (a: TimerState, b: TimerState) -> Bool {
         a.status == b.status && a.remainingSeconds == b.remainingSeconds && a.totalSeconds == b.totalSeconds
-            && a.overtimeSeconds == b.overtimeSeconds && a.display == b.display
+            && a.overtimeSeconds == b.overtimeSeconds && a.display == b.display && a.overlayHidden == b.overlayHidden
     }
 
     func json() -> Data {
@@ -33,6 +35,7 @@ struct TimerState: Equatable {
             "overtimeSeconds": overtimeSeconds ?? NSNull(),
             "percentRemaining": percentRemaining ?? NSNull(),
             "display": display,
+            "overlayHidden": overlayHidden,
             "updatedAt": iso.string(from: updatedAt),
         ]
         return (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data("{}".utf8)

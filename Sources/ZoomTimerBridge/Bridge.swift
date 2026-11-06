@@ -22,6 +22,22 @@ final class Bridge {
         server = try HTTPServer(port: port, overlayDirectory: overlayDirectory, queue: queue) { [unowned self] in
             self.tracker.state
         }
+        server.onVisibilityChange = { [unowned self] _ in
+            let state = self.clientState()
+            DispatchQueue.main.async { self.onChange?(state) }
+        }
+    }
+
+    /// Hide Overlay toggle (also reachable at /visibility/...). Safe to call from any thread.
+    func setOverlayHidden(_ hidden: Bool) {
+        queue.async { self.server.setOverlayHidden(hidden) }
+    }
+
+    /// Must be called on `queue`.
+    private func clientState() -> TimerState {
+        var state = tracker.state
+        state.overlayHidden = server.overlayHidden
+        return state
     }
 
     /// Forwarded to the main queue; e.g. "address already in use".
@@ -53,7 +69,7 @@ final class Bridge {
 
     private func tick() {
         guard tracker.update(with: reader.read()) else { return }
-        let state = tracker.state
+        let state = clientState()
         if state.status != lastLogged {
             print("status: \(state.status.rawValue) \(state.display)")
             lastLogged = state.status

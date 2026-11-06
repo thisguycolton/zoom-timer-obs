@@ -23,6 +23,10 @@ public sealed class Bridge : IDisposable
     }
 
     public int Port => server.Port;
+    /// <summary>Hides the OBS overlays (fully transparent) without stopping the reader.</summary>
+    public bool OverlayHidden { get => server.OverlayHidden; set => server.OverlayHidden = value; }
+    /// <summary>Raised when OverlayHidden changes, including from the /visibility endpoints (on a server thread).</summary>
+    public event Action<bool>? OverlayHiddenChanged { add => server.OverlayHiddenChanged += value; remove => server.OverlayHiddenChanged -= value; }
     /// <summary>Supplies installed font names for GET /fonts.</summary>
     public Func<IEnumerable<string>>? FontProvider { get => server.FontProvider; set => server.FontProvider = value; }
     public string OverlayDirectory { get; }
