@@ -23,7 +23,17 @@
   for (const [param, v] of Object.entries(cssVars)) {
     let val = params.get(param);
     if (val == null) continue;
-    if (param === "size" || param === "radius" || param === "barHeight") {
+    if (param === "font") {
+      // Quote the name (names like "Exo 2" are invalid unquoted) and keep a fallback stack.
+      const name = val.replace(/["\\;{}<>]/g, "").trim();
+      if (!name) continue;
+      // Ask the helper for the font file itself; OBS often can't find installed fonts by name.
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = opt.source.replace(/\/$/, "") + "/fontface/" + encodeURIComponent(name) + ".css";
+      document.head.appendChild(link);
+      val = '"' + name + '", -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
+    } else if (param === "size" || param === "radius" || param === "barHeight") {
       if (/^\d+(\.\d+)?$/.test(val)) val += param === "size" ? "px" : "em";
     } else if (/^([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(val)) val = "#" + val;
     root.setProperty("--" + v, val);
