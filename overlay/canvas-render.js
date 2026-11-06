@@ -68,6 +68,39 @@
     return true;
   }
 
+  /**
+   * Links the helper's @font-face rules for installed fonts (GET /fontface/<family>.css), so OBS's browser
+   * source gets the actual font file instead of relying on finding the installed font by name, which it
+   * often can't. Google fonts are skipped. If the helper doesn't know the font, the name lookup still applies.
+   */
+  const linkedLocal = {};
+  function loadLocalFonts(names, base) {
+    let added = false;
+    names.forEach((n) => {
+      const name = String(n || "").trim();
+      if (!name || GOOGLE_FONT_NAMES[name.toLowerCase()] || linkedLocal[name.toLowerCase()]) return;
+      linkedLocal[name.toLowerCase()] = true;
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = (base || "") + "/fontface/" + encodeURIComponent(name) + ".css";
+      link.onload = () => {
+        // Font files load lazily; ask for the ones in use so text is measured with them.
+        if (document.fonts && document.fonts.load) {
+          ["400", "700"].forEach((w) => document.fonts.load(w + " 100px \"" + name.replace(/["\\]/g, "") + "\"").catch(() => {}));
+        }
+      };
+      document.head.appendChild(link);
+      added = true;
+    });
+    return added;
+  }
+
+  function loadFonts(names, base) {
+    const g = loadGoogleFonts(names);
+    const l = loadLocalFonts(names, base);
+    return g || l;
+  }
+
   function fontsInLayout(layout) {
     const names = [layout.theme.font];
     layout.items.forEach((i) => names.push(i.font));
@@ -268,7 +301,7 @@
         applyItemStyle(node);
       }
       // Text is sized by measuring it, so measure again once web fonts arrive.
-      loadGoogleFonts(fontsInLayout(layout));
+      loadFonts(fontsInLayout(layout), options.source);
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
       resize();
       render();
@@ -285,7 +318,7 @@
       const node = nodes[item.id];
       if (!node || node.item.type !== item.type) return setLayout(layout);
       node.item = item;
-      if (loadGoogleFonts(fontsInLayout(layout)) && document.fonts) document.fonts.ready.then(refit);
+      if (loadFonts(fontsInLayout(layout), options.source) && document.fonts) document.fonts.ready.then(refit);
       applyItemStyle(node);
       render();
     }
@@ -366,5 +399,5 @@
   }
 
   window.ZoomTimerCanvas = { createRenderer: createRenderer, normalize: normalize, DEFAULT_LAYOUT: DEFAULT_LAYOUT, TYPES: TYPES, demoStates: demoStates, clone: clone,
-                               GOOGLE_FONTS: GOOGLE_FONTS, loadGoogleFonts: loadGoogleFonts };
+                               GOOGLE_FONTS: GOOGLE_FONTS, loadGoogleFonts: loadGoogleFonts, loadFonts: loadFonts };
 })();

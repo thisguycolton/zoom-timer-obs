@@ -21,7 +21,7 @@
   (function () {
     const params = new URLSearchParams(location.search);
     const base = (params.get("source") || "").replace(/\/$/, "");
-    const renderer = ZoomTimerCanvas.createRenderer(document.getElementById("stage"));
+    const renderer = ZoomTimerCanvas.createRenderer(document.getElementById("stage"), { source: base });
 
     function loadLayout() {
       return fetch(base + "/layout", { cache: "no-store" })

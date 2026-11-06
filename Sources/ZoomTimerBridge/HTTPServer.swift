@@ -150,6 +150,20 @@ final class HTTPServer {
             }
         case "/events":
             openEventStream(connection)
+        case _ where path.hasPrefix("/fontface/") && path.hasSuffix(".css"):
+            let family = String(path.dropFirst("/fontface/".count).dropLast(".css".count)).removingPercentEncoding ?? ""
+            if let css = FontFiles.css(family: family) {
+                respond(connection, status: "200 OK", contentType: "text/css; charset=utf-8", body: css)
+            } else {
+                respond(connection, status: "404 Not Found", contentType: "text/css; charset=utf-8", body: Data("/* not installed */".utf8))
+            }
+        case _ where path.hasPrefix("/fontfile/") && path.hasSuffix(".ttf"):
+            let name = String(path.dropFirst("/fontfile/".count).dropLast(".ttf".count)).removingPercentEncoding ?? ""
+            if let font = FontFiles.file(postScriptName: name) {
+                respond(connection, status: "200 OK", contentType: "font/otf", body: font)
+            } else {
+                respond(connection, status: "404 Not Found", body: Data("Not found".utf8))
+            }
         case _ where path.hasPrefix("/assets/"):
             serveFile(path: String(path.dropFirst("/assets".count)), from: layoutStore.assetsDirectory, on: connection)
         default:
