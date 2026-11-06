@@ -55,7 +55,7 @@
   function undo() {
     if (history.length < 2) return;
     future.push(history.pop());
-    layout = JSON.parse(history[history.length - 1]);
+    layout = keepTemplates(JSON.parse(history[history.length - 1]));
     if (!find(selectedId)) selectedId = null;
     save(); refreshAll();
   }
@@ -63,8 +63,14 @@
     if (!future.length) return;
     const next = future.pop();
     history.push(next);
-    layout = JSON.parse(next);
+    layout = keepTemplates(JSON.parse(next));
     save(); refreshAll();
+  }
+
+  /** Saved templates live in the layout file under "templates" but stay out of undo/redo. */
+  function keepTemplates(next) {
+    if (layout.templates) next.templates = layout.templates; else delete next.templates;
+    return next;
   }
 
   // ---------- Helpers ----------
@@ -85,6 +91,7 @@
     refreshParts();
     refreshProps();
     positionSelection();
+    refreshTemplates();
     $("obsUrl").textContent = location.origin + "/canvas.html";
     $("obsSize").textContent = layout.canvas.width + " × " + layout.canvas.height;
   }
@@ -364,13 +371,7 @@
       extra.options.forEach(([v, t]) => { const o = el("option", { value: v, text: t }); if (String(value) === String(v)) o.selected = true; control.appendChild(o); });
       control.addEventListener("change", () => onChange(extra.number ? Number(control.value) : control.value));
     } else if (kind === "color") {
-      const text = el("input", { type: "text", placeholder: extra.placeholder || "none" });
-      text.value = obj[key] || "";
-      const swatch = el("input", { type: "color" });
-      swatch.value = /^#[0-9a-f]{6}$/i.test(obj[key] || "") ? obj[key] : (extra.swatch || "#000000");
-      swatch.addEventListener("input", () => { text.value = swatch.value; onChange(swatch.value); });
-      text.addEventListener("change", () => onChange(text.value.trim()));
-      control = el("div", { class: "row" }, [swatch, text]);
+      control = ColorPicker.create({ value: obj[key] || "", placeholder: extra.placeholder || "none", fallback: extra.swatch, onChange: onChange }).element;
     } else if (kind === "font") {
       control = FontPicker.create({ value: obj[key] || "", placeholder: extra.placeholder, googleFonts: ZTC.GOOGLE_FONTS, onChange: onChange }).element;
     } else if (kind === "range") {
@@ -540,9 +541,80 @@
   $("redo").addEventListener("click", redo);
   $("reset").addEventListener("click", () => {
     if (!confirm("Replace the layout with the default one?")) return;
+    const templates = layout.templates;
     layout = ZTC.normalize(null);
+    if (templates) layout.templates = templates;
     selectedId = null;
     commit();
+  });
+
+  // ---------- Templates ----------
+  // A template is a saved copy of the canvas, theme and parts, kept in the helper's layout file.
+
+  function templateNames() {
+    return Object.keys(layout.templates || {}).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }
+  function refreshTemplates() {
+    const sel = $("templates");
+    sel.textContent = "";
+    const add = (value, text, parent, disabled) => {
+      const o = document.createElement("option");
+      o.value = value; o.textContent = text; o.disabled = !!disabled;
+      (parent || sel).appendChild(o);
+      return o;
+    };
+    add("", "Templates…");
+    const names = templateNames();
+    if (names.length) {
+      const group = document.createElement("optgroup");
+      group.label = "Load";
+      names.forEach((n) => add("load:" + n, n, group));
+      sel.appendChild(group);
+    }
+    const actions = document.createElement("optgroup");
+    actions.label = "Manage";
+    add("save", "Save current as template…", actions);
+    if (names.length) add("delete", "Delete a template…", actions);
+    sel.appendChild(actions);
+    sel.value = "";
+  }
+  function saveTemplate() {
+    const suggested = templateNames().length ? "" : "My style";
+    const name = (prompt("Template name (an existing name is replaced):", suggested) || "").trim();
+    if (!name) return;
+    if (layout.templates && layout.templates[name] && !confirm('Replace the template "' + name + '"?')) return;
+    layout.templates = layout.templates || {};
+    layout.templates[name] = ZTC.clone({ canvas: layout.canvas, theme: layout.theme, items: layout.items });
+    save();
+    refreshTemplates();
+    setStatus('Saved template "' + name + '"');
+  }
+  function loadTemplate(name) {
+    const t = layout.templates && layout.templates[name];
+    if (!t) return;
+    const copy = ZTC.clone(t);
+    layout.canvas = copy.canvas; layout.theme = copy.theme; layout.items = copy.items;
+    layout = ZTC.normalize(layout);
+    selectedId = null;
+    commit();
+    setStatus('Loaded template "' + name + '"');
+  }
+  function deleteTemplate() {
+    const names = templateNames();
+    const name = (prompt("Delete which template?\n\n" + names.join("\n"), names[0] || "") || "").trim();
+    if (!name || !layout.templates || !layout.templates[name]) return;
+    delete layout.templates[name];
+    if (!Object.keys(layout.templates).length) delete layout.templates;
+    save();
+    refreshTemplates();
+  }
+  $("templates").addEventListener("change", (e) => {
+    const v = e.target.value;
+    e.target.value = "";
+    if (v === "save") saveTemplate();
+    else if (v === "delete") deleteTemplate();
+    else if (v.startsWith("load:")) loadTemplate(v.slice(5));
+    e.target.blur();
   });
   $("copyUrl").addEventListener("click", () => {
     const url = location.origin + "/canvas.html";
